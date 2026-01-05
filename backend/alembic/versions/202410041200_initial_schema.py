@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.Column("title", sa.Text(), nullable=False),
         sa.Column("type", sa.String(length=50), nullable=False),
         sa.Column("duration_weeks", sa.Integer(), nullable=True),
-        sa.Column("status", sa.String(length=50), nullable=False, server_default=sa.text("'draft'::text")),
+        sa.Column("status", sa.String(length=50), nullable=False, server_default=sa.text("'draft'")),
         sa.Column("metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column(

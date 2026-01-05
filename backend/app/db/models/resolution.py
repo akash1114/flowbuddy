@@ -19,7 +19,7 @@ class Resolution(Base):
     title = Column(Text, nullable=False)
     type = Column(String(length=50), nullable=False)
     duration_weeks = Column(Integer, nullable=True)
-    status = Column(String(length=50), nullable=False, server_default=sa_text("'draft'::text"))
+    status = Column(String(length=50), nullable=False, server_default=sa_text("'draft'"))
     # Column named "metadata" but attribute renamed to avoid Base.metadata collisions.
     metadata_json = Column("metadata", JSONBCompat, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
