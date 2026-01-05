@@ -74,6 +74,28 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
     -d '{"user_id":"5e0af89e-e16d-4702-b4aa-d0fafb9055c6","text":"Feeling overwhelmed because my project goal is stuck. I want to focus tomorrow."}'
   ```
 
+## Resolution Intake & Decomposer (Tickets 5-6)
+- Endpoint 1: `POST /resolutions` stores a draft resolution, normalizes the title, and captures the original free-text request.
+- Endpoint 2: `POST /resolutions/{resolution_id}/decompose` creates a 4–12 week outline plus Week-1 draft tasks. Tasks remain **draft only**; Ticket 7 will add approval and activation.
+- Example flow:
+  ```bash
+  source .venv/bin/activate
+  cd backend
+  # Create a resolution
+  curl -X POST http://localhost:8000/resolutions \
+    -H "Content-Type: application/json" \
+    -d '{
+      "user_id":"11111111-2222-3333-4444-555555555555",
+      "text":"Build a mindful morning routine that supports focus and energy.",
+      "duration_weeks":8
+    }'
+  # Replace <resolution_id> with the id returned above
+  curl -X POST http://localhost:8000/resolutions/<resolution_id>/decompose \
+    -H "Content-Type: application/json" \
+    -d '{"weeks":8}'
+  ```
+- The decomposer persists the outline inside `Resolution.metadata_json["plan_v1"]` and stores Week-1 tasks in the `tasks` table marked with `{"draft": true, "source": "decomposer_v1"}` so they can be safely reviewed before activation.
+
 ## Testing
 - Default (SQLite) tests, Opik disabled:
   ```bash

@@ -86,7 +86,7 @@ TYPE_KEYWORDS: List[Tuple[str, Tuple[str, ...]]] = [
 def derive_resolution_fields(text: str) -> ResolutionIntakeResult:
     """Return normalized title and best-effort classification."""
     normalized_title = _normalize_title(text)
-    resolution_type = _classify_type(text)
+    resolution_type = classify_resolution_type(text)
     return ResolutionIntakeResult(title=normalized_title, type=resolution_type)
 
 
@@ -109,7 +109,7 @@ def _first_sentence(text: str) -> str:
     return parts[0] if parts else text
 
 
-def _classify_type(text: str) -> str:
+def classify_resolution_type(text: str) -> str:
     lowered = text.lower()
     for type_name, keywords in TYPE_KEYWORDS:
         if any(keyword in lowered for keyword in keywords):
