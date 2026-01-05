@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+
+# Node/Expo
+mobile/node_modules/
+.expo/
+.expo-shared/
+.DS_Store
+
+# Misc
+.idea/
+.vscode/

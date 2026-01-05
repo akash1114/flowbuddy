@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "FlowBuddy",
+    "slug": "flowbuddy",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "flowbuddy",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.akash114.flowbuddy"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+2026-01-03 11:31:09.068 IST [30686] LOG:  starting PostgreSQL 14.17 (Homebrew) on aarch64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit
+2026-01-03 11:31:09.070 IST [30686] LOG:  listening on IPv6 address "::1", port 55432
+2026-01-03 11:31:09.070 IST [30686] LOG:  listening on IPv4 address "127.0.0.1", port 55432
+2026-01-03 11:31:09.070 IST [30686] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55432"
+2026-01-03 11:31:09.077 IST [30687] LOG:  database system was shut down at 2026-01-03 11:30:36 IST
+2026-01-03 11:31:09.079 IST [30686] LOG:  database system is ready to accept connections
+2026-01-03 12:20:21.263 IST [34607] ERROR:  insert or update on table "brain_dumps" violates foreign key constraint "fk_brain_dumps_user_id_users"
+2026-01-03 12:20:21.263 IST [34607] DETAIL:  Key (user_id)=(5e0af89e-e16d-4702-b4aa-d0fafb9055c6) is not present in table "users".
+2026-01-03 12:20:21.263 IST [34607] STATEMENT:  INSERT INTO brain_dumps (id, user_id, text, signals_extracted, actionable, user_accepted_help) VALUES ('cf2f3696-6fac-477c-8caf-003ce035cb04'::uuid::UUID, '5e0af89e-e16d-4702-b4aa-d0fafb9055c6'::uuid::UUID, 'test', '{"emotional_state": null, "blockers": [], "resolution_refs": [], "intent_shift": null}'::JSONB, false, NULL) RETURNING brain_dumps.created_at
+2026-01-03 17:59:06.428 IST [30686] LOG:  received smart shutdown request
+2026-01-03 17:59:06.430 IST [30686] LOG:  background worker "logical replication launcher" (PID 30693) exited with exit code 1
+2026-01-03 17:59:06.430 IST [30688] LOG:  shutting down
+2026-01-03 17:59:06.461 IST [30686] LOG:  database system is shut down
