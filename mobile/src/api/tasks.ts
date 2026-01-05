@@ -8,6 +8,7 @@ export type TaskItem = {
   scheduled_time: string | null;
   duration_min: number | null;
   completed: boolean;
+  note: string | null;
   created_at: string;
   updated_at: string;
   source: string;
@@ -50,6 +51,22 @@ export async function updateTaskCompletion(
   const { data, response } = await apiRequest<TaskUpdateResponse>(`/tasks/${taskId}`, {
     method: "PATCH",
     body: { user_id: userId, completed },
+  });
+
+  return {
+    result: data,
+    requestId: data.request_id || response.headers.get("X-Request-Id"),
+  };
+}
+
+export async function updateTaskNote(
+  taskId: string,
+  userId: string,
+  note: string | null,
+): Promise<{ result: TaskNoteUpdateResponse; requestId: string | null }> {
+  const { data, response } = await apiRequest<TaskNoteUpdateResponse>(`/tasks/${taskId}/note`, {
+    method: "PATCH",
+    body: { user_id: userId, note },
   });
 
   return {

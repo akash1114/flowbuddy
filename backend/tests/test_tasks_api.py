@@ -172,3 +172,75 @@ def test_update_task_enforces_ownership(client):
         json={"user_id": str(uuid4()), "completed": True},
     )
     assert resp.status_code == 403
+
+
+def test_task_note_updates_and_audit_logs(client):
+    test_client, session_factory = client
+    user_id = uuid4()
+    plan = _approve_plan(test_client, user_id)
+    task_id = plan["tasks"][0]["id"]
+
+    note_resp = test_client.patch(
+        f"/tasks/{task_id}/note",
+        json={"user_id": str(user_id), "note": "Focus on breathing"},
+    )
+    assert note_resp.status_code == 200
+    assert note_resp.json()["note"] == "Focus on breathing"
+
+    with session_factory() as db:
+        task = db.get(Task, UUID(task_id))
+        assert (task.metadata_json or {}).get("note") == "Focus on breathing"
+        logs = [
+            log
+            for log in db.query(AgentActionLog).filter(AgentActionLog.user_id == user_id).all()
+            if log.action_type.startswith("task_note")
+        ]
+        assert len(logs) == 1
+        assert logs[0].action_type == "task_note_updated"
+
+    # Idempotent update (same note)
+    repeat_resp = test_client.patch(
+        f"/tasks/{task_id}/note",
+        json={"user_id": str(user_id), "note": "Focus on breathing"},
+    )
+    assert repeat_resp.status_code == 200
+    with session_factory() as db:
+        logs = [
+            log
+            for log in db.query(AgentActionLog).filter(AgentActionLog.user_id == user_id).all()
+            if log.action_type.startswith("task_note")
+        ]
+        assert len(logs) == 1
+
+    # Clear note
+    clear_resp = test_client.patch(
+        f"/tasks/{task_id}/note",
+        json={"user_id": str(user_id), "note": None},
+    )
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["note"] is None
+    with session_factory() as db:
+        task = db.get(Task, UUID(task_id))
+        assert (task.metadata_json or {}).get("note") is None
+        logs = [
+            log
+            for log in db.query(AgentActionLog).filter(AgentActionLog.user_id == user_id).all()
+            if log.action_type.startswith("task_note")
+        ]
+        assert len(logs) == 2
+        assert logs[-1].action_type == "task_note_cleared"
+
+    # Too long note
+    long_note = "a" * 501
+    resp = test_client.patch(
+        f"/tasks/{task_id}/note",
+        json={"user_id": str(user_id), "note": long_note},
+    )
+    assert resp.status_code == 422
+
+    # Ownership
+    resp = test_client.patch(
+        f"/tasks/{task_id}/note",
+        json={"user_id": str(uuid4()), "note": "hi"},
+    )
+    assert resp.status_code == 403

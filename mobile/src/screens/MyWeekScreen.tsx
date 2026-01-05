@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   SectionList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../../types/navigation";
-import { listTasks, TaskItem, updateTaskCompletion } from "../api/tasks";
+import { listTasks, TaskItem, updateTaskCompletion, updateTaskNote } from "../api/tasks";
 import { useUserId } from "../state/user";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MyWeek">;
@@ -26,8 +28,14 @@ export default function MyWeekScreen() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [listRequestId, setListRequestId] = useState<string | null>(null);
+  const [noteRequestId, setNoteRequestId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [noteTask, setNoteTask] = useState<TaskItem | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const grouped = useMemo<TaskSection[]>(() => {
     const scheduled = tasks.filter((task) => !!task.scheduled_day);
@@ -47,8 +55,9 @@ export default function MyWeekScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { tasks: list } = await listTasks(userId, { status: "active" });
+      const { tasks: list, requestId } = await listTasks(userId, { status: "active" });
       setTasks(list);
+      setListRequestId(requestId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load tasks right now.");
     } finally {
@@ -64,8 +73,8 @@ export default function MyWeekScreen() {
   }, [userLoading, userId]);
 
   const renderItem = ({ item }: { item: TaskItem }) => (
-    <TouchableOpacity style={[styles.card, item.completed && styles.cardCompleted]} onPress={() => handleToggle(item)} disabled={!!updatingId}>
-      <View style={styles.row}>
+    <View style={[styles.card, item.completed && styles.cardCompleted]}>
+      <TouchableOpacity style={styles.row} onPress={() => handleToggle(item)} disabled={!!updatingId}>
         <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
           {item.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
         </View>
@@ -77,8 +86,12 @@ export default function MyWeekScreen() {
           </Text>
           {item.duration_min ? <Text style={styles.meta}>{item.duration_min} min</Text> : null}
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {item.note ? <Text style={styles.noteText}>{item.note}</Text> : null}
+      <TouchableOpacity style={styles.noteButton} onPress={() => openNoteModal(item)} disabled={noteSaving}>
+        <Text style={styles.noteButtonText}>{item.note ? "Edit note" : "Add note"}</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const handleToggle = async (task: TaskItem) => {
@@ -94,6 +107,63 @@ export default function MyWeekScreen() {
       setError(err instanceof Error ? err.message : "Unable to update that task right now.");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const openNoteModal = (task: TaskItem) => {
+    setNoteTask(task);
+    setNoteText(task.note ?? "");
+    setNoteError(null);
+  };
+
+  const closeNoteModal = () => {
+    setNoteTask(null);
+    setNoteText("");
+    setNoteError(null);
+  };
+
+  const trimmedNote = noteText.trim();
+  const noteTooLong = trimmedNote.length > 500;
+  const saveDisabled = noteSaving || noteTooLong || (!trimmedNote && !noteTask?.note);
+
+  const handleSaveNote = async () => {
+    if (!userId || !noteTask) return;
+    setNoteSaving(true);
+    setNoteError(null);
+    try {
+      const payload = trimmedNote ? trimmedNote : null;
+      const { requestId } = await updateTaskNote(noteTask.id, userId, payload);
+      setNoteRequestId(requestId);
+      await loadTasks();
+      closeNoteModal();
+    } catch (err) {
+      setNoteError(err instanceof Error ? err.message : "Unable to save that note right now.");
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const handleClearNote = async () => {
+    if (!noteTask) {
+      closeNoteModal();
+      return;
+    }
+    if (!noteTask.note) {
+      closeNoteModal();
+      return;
+    }
+    if (!userId) return;
+    setNoteSaving(true);
+    setNoteError(null);
+    try {
+      const { requestId } = await updateTaskNote(noteTask.id, userId, null);
+      setNoteRequestId(requestId);
+      await loadTasks();
+      closeNoteModal();
+    } catch (err) {
+      setNoteError(err instanceof Error ? err.message : "Unable to clear that note right now.");
+    } finally {
+      setNoteSaving(false);
     }
   };
 
@@ -143,6 +213,53 @@ export default function MyWeekScreen() {
         }}
         contentContainerStyle={styles.listContent}
       />
+
+      {(listRequestId || noteRequestId) ? (
+        <View style={styles.debugCard}>
+          {listRequestId ? <Text style={styles.debugValue}>list_request_id: {listRequestId}</Text> : null}
+          {noteRequestId ? <Text style={styles.debugValue}>note_request_id: {noteRequestId}</Text> : null}
+        </View>
+      ) : null}
+
+      <Modal visible={!!noteTask} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{noteTask?.note ? "Edit note" : "Add note"}</Text>
+            <TextInput
+              style={styles.noteInput}
+              multiline
+              placeholder="Add a gentle reflection"
+              value={noteText}
+              onChangeText={setNoteText}
+              editable={!noteSaving}
+              maxLength={500}
+            />
+            <Text style={styles.noteCounter}>{trimmedNote.length}/500</Text>
+            {noteError ? <Text style={styles.error}>{noteError}</Text> : null}
+            <View style={styles.modalActions}>
+              {noteTask?.note ? (
+                <TouchableOpacity onPress={handleClearNote} disabled={noteSaving}>
+                  <Text style={styles.clearText}>Clear note</Text>
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.modalButton} onPress={closeNoteModal} disabled={noteSaving}>
+                  <Text style={styles.secondaryText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.primary, saveDisabled && styles.buttonDisabled]}
+                  onPress={handleSaveNote}
+                  disabled={saveDisabled}
+                >
+                  {noteSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,6 +325,17 @@ const styles = StyleSheet.create({
   taskContent: {
     flex: 1,
   },
+  noteText: {
+    marginTop: 8,
+    color: "#333",
+  },
+  noteButton: {
+    marginTop: 8,
+  },
+  noteButtonText: {
+    color: "#1a73e8",
+    fontWeight: "600",
+  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -240,5 +368,63 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: "#111",
+  },
+  debugCard: {
+    padding: 12,
+    borderTopWidth: 1,
+    borderColor: "#e6e9f2",
+  },
+  debugValue: {
+    color: "#111",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: "#d5d9e6",
+    borderRadius: 12,
+    minHeight: 100,
+    padding: 12,
+    textAlignVertical: "top",
+  },
+  noteCounter: {
+    alignSelf: "flex-end",
+    color: "#777",
+    marginTop: 4,
+    fontSize: 12,
+  },
+  modalActions: {
+    marginTop: 16,
+  },
+  clearText: {
+    color: "#c62828",
+    fontWeight: "600",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d0d5dd",
   },
 });

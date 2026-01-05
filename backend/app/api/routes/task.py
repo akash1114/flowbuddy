@@ -9,7 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import asc, nulls_last
 from sqlalchemy.orm import Session
 
-from app.api.schemas.task import TaskSummary, TaskUpdateRequest, TaskUpdateResponse
+from app.api.schemas.task import (
+    TaskSummary,
+    TaskUpdateRequest,
+    TaskUpdateResponse,
+    TaskNoteUpdateRequest,
+    TaskNoteUpdateResponse,
+)
 from app.db.deps import get_db
 from app.db.models.agent_action_log import AgentActionLog
 from app.db.models.task import Task
@@ -182,6 +188,12 @@ def _serialize_task(task: Task) -> TaskSummary:
     if source not in {"decomposer_v1", "manual", "unknown"}:
         source = "unknown"
 
+    note_value = metadata.get("note")
+    if isinstance(note_value, str):
+        note_text = note_value
+    else:
+        note_text = None
+
     return TaskSummary(
         id=task.id,
         resolution_id=task.resolution_id,
@@ -190,7 +202,105 @@ def _serialize_task(task: Task) -> TaskSummary:
         scheduled_time=task.scheduled_time,
         duration_min=task.duration_min,
         completed=bool(task.completed),
+        note=note_text,
         created_at=task.created_at,
         updated_at=task.updated_at,
         source=source,
+    )
+
+
+@router.patch("/tasks/{task_id}/note", response_model=TaskNoteUpdateResponse, tags=["tasks"])
+def update_task_note(
+    task_id: UUID,
+    payload: TaskNoteUpdateRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+) -> TaskNoteUpdateResponse:
+    """Set or clear a task note."""
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.user_id != payload.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Task does not belong to user")
+
+    request_id = getattr(http_request.state, "request_id", None)
+    metadata = dict(task.metadata_json or {})
+    current_note = metadata.get("note") if isinstance(metadata.get("note"), str) else None
+
+    new_note = payload.note
+    if new_note is not None:
+        trimmed = new_note.strip()
+        if len(trimmed) > 500:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Note must be 500 characters or less")
+        new_note = trimmed or None
+
+    changed = current_note != new_note
+    note_length = len(new_note) if new_note else 0
+
+    start_time = datetime.now(timezone.utc)
+    try:
+        with trace(
+            "task.note",
+            metadata={
+                "route": f"/tasks/{task_id}/note",
+                "task_id": str(task_id),
+                "user_id": str(payload.user_id),
+                "note_length": note_length,
+                "changed": changed,
+                "request_id": request_id,
+            },
+            user_id=str(payload.user_id),
+            request_id=request_id,
+        ):
+            if changed:
+                if new_note is None:
+                    metadata.pop("note", None)
+                else:
+                    metadata["note"] = new_note
+                task.metadata_json = metadata
+                log = AgentActionLog(
+                    user_id=payload.user_id,
+                    action_type="task_note_updated" if new_note else "task_note_cleared",
+                    action_payload={
+                        "task_id": str(task.id),
+                        "resolution_id": str(task.resolution_id) if task.resolution_id else None,
+                        "previous_note_present": bool(current_note),
+                        "note_length": note_length,
+                        "request_id": request_id,
+                    },
+                    reason="Task note updated",
+                    undo_available=True,
+                )
+                db.add(log)
+            db.add(task)
+            db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+    log_metric(
+        "task.note.success",
+        1,
+        metadata={"user_id": str(payload.user_id), "task_id": str(task_id)},
+    )
+    log_metric(
+        "task.note.changed",
+        1 if changed else 0,
+        metadata={"user_id": str(payload.user_id), "task_id": str(task_id)},
+    )
+    log_metric(
+        "task.note.length",
+        note_length,
+        metadata={"task_id": str(task_id)},
+    )
+    log_metric("task.note.latency_ms", latency_ms, metadata={"task_id": str(task_id)})
+
+    return TaskNoteUpdateResponse(
+        id=task.id,
+        note=new_note,
+        request_id=request_id or "",
     )
