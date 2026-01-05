@@ -10,6 +10,8 @@ import ResolutionCreateScreen from "./src/screens/ResolutionCreateScreen";
 import PlanReviewScreen from "./src/screens/PlanReviewScreen";
 import ResolutionsListScreen from "./src/screens/ResolutionsListScreen";
 import MyWeekScreen from "./src/screens/MyWeekScreen";
+import ResolutionDashboardScreen from "./src/screens/ResolutionDashboardScreen";
+import ResolutionDashboardDetailScreen from "./src/screens/ResolutionDashboardDetailScreen";
 import type { RootStackParamList } from "./types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -27,6 +29,12 @@ function App() {
           options={{ title: "Draft Plans" }}
         />
         <Stack.Screen name="MyWeek" component={MyWeekScreen} options={{ title: "My Week" }} />
+        <Stack.Screen name="Dashboard" component={ResolutionDashboardScreen} options={{ title: "Dashboard" }} />
+        <Stack.Screen
+          name="ResolutionDashboardDetail"
+          component={ResolutionDashboardDetailScreen}
+          options={{ title: "Resolution Overview" }}
+        />
         <Stack.Screen name="ResolutionCreate" component={ResolutionCreateScreen} options={{ title: "New Resolution" }} />
         <Stack.Screen
           name="PlanReview"

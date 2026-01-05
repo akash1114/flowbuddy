@@ -36,6 +36,13 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={[styles.button, styles.secondary]}
+        onPress={() => navigation.navigate("Dashboard")}
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Dashboard</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondary]}
         onPress={() => navigation.navigate("ResolutionCreate")}
       >
         <Text style={[styles.buttonText, styles.secondaryText]}>New Resolution</Text>

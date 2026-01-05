@@ -5,9 +5,13 @@ export type RootStackParamList = {
   BrainDump: undefined;
   DraftPlans: undefined;
   MyWeek: undefined;
+  Dashboard: undefined;
   ResolutionCreate: undefined;
   PlanReview: {
     resolutionId: string;
     initialResolution?: ResolutionResponse;
+  };
+  ResolutionDashboardDetail: {
+    resolutionId: string;
   };
 };
