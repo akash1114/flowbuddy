@@ -8,6 +8,8 @@ from app.api.routes.resolutions_decompose import router as resolutions_decompose
 from app.api.routes.resolutions_intake import router as resolutions_intake_router
 from app.api.routes.task import router as task_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes.weekly_plan import router as weekly_plan_router
+from app.api.routes.interventions import router as interventions_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIDMiddleware
@@ -25,6 +27,8 @@ app.include_router(resolutions_decompose_router)
 app.include_router(resolutions_approve_router)
 app.include_router(task_router)
 app.include_router(dashboard_router)
+app.include_router(weekly_plan_router)
+app.include_router(interventions_router)
 
 
 @app.on_event("startup")

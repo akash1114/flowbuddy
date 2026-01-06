@@ -146,6 +146,30 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
     curl "http://127.0.0.1:8000/dashboard?user_id=11111111-2222-3333-4444-555555555555"
     ```
 
+## Agent Preview & Snapshot Endpoints (Manual triggers for P0 features)
+- **Weekly Micro-Resolution Generator**
+  - `GET /weekly-plan/preview?user_id=<uuid>`: deterministic look-ahead preview (no writes).
+  - `POST /weekly-plan/run` with JSON `{"user_id":"<uuid>"}`: generates the plan, persists a snapshot inside `AgentActionLog`, and returns it.
+  - `GET /weekly-plan/latest?user_id=<uuid>`: fetches the most recent stored snapshot (404 if none).
+  - Example curls:
+    ```bash
+    curl "http://127.0.0.1:8000/weekly-plan/preview?user_id=11111111-2222-3333-4444-555555555555"
+    curl -X POST http://127.0.0.1:8000/weekly-plan/run -H "Content-Type: application/json" \
+      -d '{"user_id":"11111111-2222-3333-4444-555555555555"}'
+    curl "http://127.0.0.1:8000/weekly-plan/latest?user_id=11111111-2222-3333-4444-555555555555"
+    ```
+- **Basic Intervention System**
+  - `GET /interventions/preview?user_id=<uuid>`: read-only preview.
+  - `POST /interventions/run` with `{"user_id":"<uuid>"}`: generate + store snapshot.
+  - `GET /interventions/latest?user_id=<uuid>`: retrieve the latest stored intervention card (404 if none).
+  - Example curls:
+    ```bash
+    curl "http://127.0.0.1:8000/interventions/preview?user_id=11111111-2222-3333-4444-555555555555"
+    curl -X POST http://127.0.0.1:8000/interventions/run -H "Content-Type: application/json" \
+      -d '{"user_id":"11111111-2222-3333-4444-555555555555"}'
+    curl "http://127.0.0.1:8000/interventions/latest?user_id=11111111-2222-3333-4444-555555555555"
+    ```
+
 ## Mobile Features
 - **Home Screen** buttons:
   - Brain Dump, Draft Plans, My Week, Dashboard, New Resolution.
