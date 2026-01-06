@@ -14,6 +14,7 @@ import ResolutionDashboardScreen from "./src/screens/ResolutionDashboardScreen";
 import ResolutionDashboardDetailScreen from "./src/screens/ResolutionDashboardDetailScreen";
 import SettingsPermissionsScreen from "./src/screens/SettingsPermissionsScreen";
 import AgentLogScreen from "./src/screens/AgentLogScreen";
+import AgentLogDetailScreen from "./src/screens/AgentLogDetailScreen";
 import WeeklyPlanScreen from "./src/screens/WeeklyPlanScreen";
 import InterventionsScreen from "./src/screens/InterventionsScreen";
 import WeeklyPlanHistoryScreen from "./src/screens/WeeklyPlanHistoryScreen";
@@ -62,6 +63,11 @@ function App() {
           options={{ title: "Settings & Permissions" }}
         />
         <Stack.Screen name="AgentLog" component={AgentLogScreen} options={{ title: "Agent Log" }} />
+        <Stack.Screen
+          name="AgentLogDetail"
+          component={AgentLogDetailScreen}
+          options={{ title: "Log Detail" }}
+        />
         <Stack.Screen
           name="ResolutionDashboardDetail"
           component={ResolutionDashboardDetailScreen}

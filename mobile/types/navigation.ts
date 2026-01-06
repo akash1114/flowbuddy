@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Dashboard: undefined;
   SettingsPermissions: undefined;
   AgentLog: undefined;
+  AgentLogDetail: { logId: string };
   ResolutionCreate: undefined;
   WeeklyPlan: undefined;
   Interventions: undefined;
