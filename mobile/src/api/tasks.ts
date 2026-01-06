@@ -21,6 +21,12 @@ export type TaskUpdateResponse = {
   request_id?: string;
 };
 
+export type TaskNoteUpdateResponse = {
+  id: string;
+  note: string | null;
+  request_id: string;
+};
+
 type ListOptions = {
   status?: "active" | "draft" | "all";
   from?: string;

@@ -43,6 +43,20 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={[styles.button, styles.secondary]}
+        onPress={() => navigation.navigate("SettingsPermissions")}
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Settings & Permissions</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondary]}
+        onPress={() => navigation.navigate("AgentLog")}
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Agent Log</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondary]}
         onPress={() => navigation.navigate("ResolutionCreate")}
       >
         <Text style={[styles.buttonText, styles.secondaryText]}>New Resolution</Text>

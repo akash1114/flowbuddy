@@ -6,6 +6,8 @@ export type RootStackParamList = {
   DraftPlans: undefined;
   MyWeek: undefined;
   Dashboard: undefined;
+  SettingsPermissions: undefined;
+  AgentLog: undefined;
   ResolutionCreate: undefined;
   PlanReview: {
     resolutionId: string;

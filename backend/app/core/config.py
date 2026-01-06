@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "FlowBuddy Backend"
     debug: bool = False
     log_level: str = "INFO"
-    database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/flowbuddy"
+    database_url: str = "postgresql+psycopg2://alion@localhost:5432/flowbuddy"
     opik_enabled: bool = False
     opik_api_key: str | None = None
     opik_project: str = "flowbuddy"

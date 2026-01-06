@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -12,8 +12,9 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../../types/navigation";
-import { listTasks, TaskItem, updateTaskCompletion, updateTaskNote } from "../api/tasks";
+import { TaskItem, updateTaskCompletion, updateTaskNote } from "../api/tasks";
 import { useUserId } from "../state/user";
+import { useTasks } from "../hooks/useTasks";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MyWeek">;
 
@@ -25,10 +26,15 @@ type TaskSection = {
 export default function MyWeekScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userId, loading: userLoading } = useUserId();
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [listRequestId, setListRequestId] = useState<string | null>(null);
+  const {
+    tasks,
+    loading,
+    error: tasksError,
+    requestId: listRequestId,
+    refetch,
+    setTasks,
+  } = useTasks(userId, { status: "active" });
+  const [actionError, setActionError] = useState<string | null>(null);
   const [noteRequestId, setNoteRequestId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -49,28 +55,6 @@ export default function MyWeekScreen() {
     }
     return sections;
   }, [tasks]);
-
-  const loadTasks = async () => {
-    if (!userId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const { tasks: list, requestId } = await listTasks(userId, { status: "active" });
-      setTasks(list);
-      setListRequestId(requestId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load tasks right now.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!userLoading && userId) {
-      loadTasks();
-    }
-  }, [userLoading, userId]);
 
   const renderItem = ({ item }: { item: TaskItem }) => (
     <View style={[styles.card, item.completed && styles.cardCompleted]}>
@@ -97,14 +81,14 @@ export default function MyWeekScreen() {
   const handleToggle = async (task: TaskItem) => {
     if (!userId || updatingId) return;
     setUpdatingId(task.id);
-    setError(null);
+    setActionError(null);
     try {
       const { result } = await updateTaskCompletion(task.id, userId, !task.completed);
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, completed: result.completed } : t)),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update that task right now.");
+      setActionError(err instanceof Error ? err.message : "Unable to update that task right now.");
     } finally {
       setUpdatingId(null);
     }
@@ -134,7 +118,7 @@ export default function MyWeekScreen() {
       const payload = trimmedNote ? trimmedNote : null;
       const { requestId } = await updateTaskNote(noteTask.id, userId, payload);
       setNoteRequestId(requestId);
-      await loadTasks();
+      await refetch();
       closeNoteModal();
     } catch (err) {
       setNoteError(err instanceof Error ? err.message : "Unable to save that note right now.");
@@ -158,7 +142,7 @@ export default function MyWeekScreen() {
     try {
       const { requestId } = await updateTaskNote(noteTask.id, userId, null);
       setNoteRequestId(requestId);
-      await loadTasks();
+      await refetch();
       closeNoteModal();
     } catch (err) {
       setNoteError(err instanceof Error ? err.message : "Unable to clear that note right now.");
@@ -176,11 +160,19 @@ export default function MyWeekScreen() {
     );
   }
 
-  if (error) {
+  const combinedError = actionError || tasksError;
+
+  if (combinedError) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-        <TouchableOpacity style={styles.retry} onPress={loadTasks}>
+        <Text style={styles.error}>{combinedError}</Text>
+        <TouchableOpacity
+          style={styles.retry}
+          onPress={() => {
+            setRefreshing(true);
+            refetch().finally(() => setRefreshing(false));
+          }}
+        >
           <Text style={styles.retryText}>Try again</Text>
         </TouchableOpacity>
       </View>
@@ -209,7 +201,7 @@ export default function MyWeekScreen() {
         refreshing={refreshing}
         onRefresh={() => {
           setRefreshing(true);
-          loadTasks();
+          refetch().finally(() => setRefreshing(false));
         }}
         contentContainerStyle={styles.listContent}
       />
@@ -426,5 +418,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#d0d5dd",
+  },
+  secondaryText: {
+    color: "#1a73e8",
+    fontWeight: "600",
+  },
+  primary: {
+    backgroundColor: "#1a73e8",
+  },
+  buttonDisabled: {
+    backgroundColor: "#8fb5f8",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });

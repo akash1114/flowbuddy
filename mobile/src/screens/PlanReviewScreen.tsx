@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,124 +11,33 @@ import {
   View,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import {
-  approveResolution,
-  decomposeResolution,
-  PlanMilestone,
-  WeekOneTask,
-  TaskEditPayload,
-  ApprovalResponse,
-  getResolution,
-  ResolutionDetail,
-} from "../api/resolutions";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { approveResolution, TaskEditPayload, ApprovalResponse } from "../api/resolutions";
 import { useUserId } from "../state/user";
+import { EditableTask, useResolutionPlan } from "../hooks/useResolutionPlan";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PlanReview">;
 
-type EditableTask = {
-  id: string;
-  title: string;
-  scheduled_day: string;
-  scheduled_time: string;
-  duration_min: string;
-  original: WeekOneTask;
-};
-
 export default function PlanReviewScreen({ route, navigation }: Props) {
   const { resolutionId, initialResolution } = route.params;
   const { userId, loading: userLoading } = useUserId();
-  const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState<{ title: string; type: string; duration_weeks: number | null; plan: { weeks: number; milestones: PlanMilestone[] } } | null>(initialResolution ? {
-    title: initialResolution.title,
-    type: initialResolution.type,
-    duration_weeks: initialResolution.duration_weeks,
-    plan: {
-      weeks: initialResolution.duration_weeks ?? 8,
-      milestones: [],
-    },
-  } : null);
-  const [tasks, setTasks] = useState<EditableTask[]>([]);
+  const {
+    plan,
+    tasks,
+    loading: planLoading,
+    error: planError,
+    setTasks,
+    regenerate,
+  } = useResolutionPlan({ resolutionId, userId, initialResolution });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [success, setSuccess] = useState<ApprovalResponse | null>(null);
-
-  const defaultWeeks = useMemo(() => initialResolution?.duration_weeks ?? undefined, [initialResolution]);
-
-  const mapTasks = useCallback((rawTasks: WeekOneTask[]): EditableTask[] => {
-    return rawTasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      scheduled_day: task.scheduled_day ?? "",
-      scheduled_time: task.scheduled_time ?? "",
-      duration_min: task.duration_min != null ? String(task.duration_min) : "",
-      original: task,
-    }));
-  }, []);
-
-  const fetchPlan = useCallback(
-    async (options: { regenerate?: boolean; userId?: string } = {}) => {
-      const { regenerate = false, userId: uid } = options;
-      if (!uid) {
-        setError("Missing user id.");
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-      try {
-        const { resolution } = await getResolution(resolutionId, uid);
-        const planData = resolution.plan;
-        const hasDraftTasks = resolution.draft_tasks.length > 0;
-        if (planData && hasDraftTasks && !regenerate) {
-          setPlan({
-            title: resolution.title,
-            type: resolution.type,
-            duration_weeks: resolution.duration_weeks,
-            plan: planData,
-          });
-          setTasks(mapTasks(resolution.draft_tasks));
-          return;
-        }
-
-        const shouldDecompose = regenerate || !planData || !hasDraftTasks;
-        if (shouldDecompose) {
-          const body: { weeks?: number; regenerate?: boolean } = {};
-          if (defaultWeeks && defaultWeeks >= 4 && defaultWeeks <= 12) {
-            body.weeks = defaultWeeks;
-          }
-          if (regenerate) body.regenerate = true;
-          const { result } = await decomposeResolution(resolutionId, body);
-          setPlan({
-            title: result.title,
-            type: result.type,
-            duration_weeks: result.duration_weeks,
-            plan: result.plan,
-          });
-          setTasks(mapTasks(result.week_1_tasks));
-        } else if (planData) {
-          setPlan({
-            title: resolution.title,
-            type: resolution.type,
-            duration_weeks: resolution.duration_weeks,
-            plan: planData,
-          });
-          setTasks(mapTasks(resolution.draft_tasks));
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load plan.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [resolutionId, defaultWeeks, mapTasks],
-  );
-
-  useEffect(() => {
-    if (!userLoading && userId) {
-      fetchPlan({ userId });
-    }
-  }, [fetchPlan, userLoading, userId]);
+  const [pickerState, setPickerState] = useState<{
+    taskId: string;
+    mode: "date" | "time";
+    value: Date;
+  } | null>(null);
 
   const updateTaskField = (taskId: string, field: keyof EditableTask, value: string) => {
     setTasks((prev) =>
@@ -182,6 +92,29 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
     return edits;
   };
 
+  const openPicker = (task: EditableTask, mode: "date" | "time") => {
+    const value =
+      mode === "date" ? parseDate(task.scheduled_day) ?? new Date() : parseTime(task.scheduled_time) ?? new Date();
+    setPickerState({
+      taskId: task.id,
+      mode,
+      value,
+    });
+  };
+
+  const closePicker = () => setPickerState(null);
+
+  const confirmPicker = () => {
+    if (!pickerState) return;
+    const formatted = pickerState.mode === "date" ? formatDate(pickerState.value) : formatTime(pickerState.value);
+    if (pickerState.mode === "date") {
+      updateTaskField(pickerState.taskId, "scheduled_day", formatted);
+    } else {
+      updateTaskField(pickerState.taskId, "scheduled_time", formatted);
+    }
+    closePicker();
+  };
+
   const handleAccept = async () => {
     if (!userId || userLoading) return;
     const validationError = validateTasks();
@@ -220,12 +153,15 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
 
   const handleRegenerate = () => {
     if (!userId) return;
-    fetchPlan({ regenerate: true, userId });
+    setError(null);
+    setSuccess(null);
+    regenerate();
   };
 
-  const acceptDisabled = pending || userLoading || !userId || !plan || !tasks.length || !!success;
+  const acceptDisabled = pending || userLoading || planLoading || !userId || !plan || !tasks.length || !!success;
+  const combinedError = error || planError;
 
-  if ((loading || userLoading) && !plan) {
+  if ((planLoading || userLoading) && !plan) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
@@ -245,7 +181,7 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
         </>
       ) : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {combinedError ? <Text style={styles.error}>{combinedError}</Text> : null}
 
       {plan ? (
         <View style={styles.card}>
@@ -277,20 +213,20 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
                 editable={!pending && !success}
               />
               <View style={styles.inlineInputs}>
-                <TextInput
-                  style={[styles.inlineInput, styles.flex]}
-                  placeholder="YYYY-MM-DD"
-                  value={task.scheduled_day}
-                  onChangeText={(value) => updateTaskField(task.id, "scheduled_day", value)}
-                  editable={!pending && !success}
-                />
-                <TextInput
-                  style={[styles.inlineInput, styles.flex]}
-                  placeholder="HH:MM"
-                  value={task.scheduled_time}
-                  onChangeText={(value) => updateTaskField(task.id, "scheduled_time", value)}
-                  editable={!pending && !success}
-                />
+                <TouchableOpacity
+                  style={[styles.inlineInput, styles.flex, styles.pickerInput]}
+                  onPress={() => openPicker(task, "date")}
+                  disabled={pending || !!success}
+                >
+                  <Text style={styles.pickerValue}>{task.scheduled_day || "Select date"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.inlineInput, styles.flex, styles.pickerInput]}
+                  onPress={() => openPicker(task, "time")}
+                  disabled={pending || !!success}
+                >
+                  <Text style={styles.pickerValue}>{task.scheduled_time || "Select time"}</Text>
+                </TouchableOpacity>
                 <TextInput
                   style={[styles.inlineInput, styles.flex]}
                   placeholder="Minutes"
@@ -333,7 +269,33 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
-
+      {pickerState ? (
+        <Modal transparent animationType="fade">
+          <View style={styles.pickerBackdrop}>
+            <View style={styles.pickerCard}>
+              <Text style={styles.sectionTitle}>{pickerState.mode === "date" ? "Pick a date" : "Pick a time"}</Text>
+              <DateTimePicker
+                value={pickerState.value}
+                mode={pickerState.mode}
+                display="spinner"
+                onChange={(_, date) => {
+                  if (date) {
+                    setPickerState((prev) => (prev ? { ...prev, value: date } : prev));
+                  }
+                }}
+              />
+              <View style={styles.pickerActions}>
+                <TouchableOpacity style={styles.modalButton} onPress={closePicker}>
+                  <Text style={styles.secondaryText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalButton, styles.primary]} onPress={confirmPicker}>
+                  <Text style={styles.buttonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </ScrollView>
   );
 }
@@ -406,6 +368,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
   },
+  pickerInput: {
+    justifyContent: "center",
+  },
+  pickerValue: {
+    color: "#111",
+  },
   flex: {
     flex: 1,
   },
@@ -471,4 +439,59 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#555",
   },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  pickerCard: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+  pickerActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d0d5dd",
+  },
 });
+
+function parseDate(value: string): Date | null {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+function parseTime(value: string): Date | null {
+  if (!value) return null;
+  const [hours, minutes] = value.split(":").map(Number);
+  if (hours == null || minutes == null) return null;
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+const pad = (num: number) => num.toString().padStart(2, "0");
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  return `${year}-${month}-${day}`;
+}
+
+function formatTime(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

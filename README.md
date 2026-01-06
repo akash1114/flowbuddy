@@ -134,6 +134,26 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
   python -m pytest backend/tests/test_observability_enabled.py
   ```
 
+## Task Management & Dashboard (Tickets 7-12)
+- **Tasks API**
+  - `GET /tasks?user_id=<uuid>&status=active|draft|all`: returns active and/or draft tasks with schedule metadata and notes (stored in `tasks.metadata_json`).
+  - `PATCH /tasks/{task_id}` toggles completion; also inserts an `AgentActionLog` entry.
+  - `PATCH /tasks/{task_id}/note` sets or clears a note (trimmed, max 500 chars) without schema changes.
+- **Resolution Dashboard**
+  - `GET /dashboard?user_id=<uuid>` aggregates weekly progress across active resolutions (tasks totals/completion rate, scheduled vs unscheduled counts, and recent activity with note presence). Traces: `dashboard.get`.
+  - Example:
+    ```bash
+    curl "http://127.0.0.1:8000/dashboard?user_id=11111111-2222-3333-4444-555555555555"
+    ```
+
+## Mobile Features
+- **Home Screen** buttons:
+  - Brain Dump, Draft Plans, My Week, Dashboard, New Resolution.
+- **Draft Plans** lists all draft resolutions and links back into Plan Review.
+- **Resolution Create + Plan Review**: mirror backend create/decompose/approve flow with client-side validation and inline task edits.
+- **My Week**: shows active tasks grouped by scheduled/unscheduled sections, allows completion toggles and note editing (modal with 500-char limit). Pull-to-refresh refetches `/tasks`.
+- **Dashboard**: lists active resolutions with weekly stats, completion rate, and recent activity. Tapping a card opens a detail screen that shows scheduled/unscheduled tasks for the current week plus recent completions.
+
 ## Mobile (Expo / React Native)
 1. Install dependencies:
    ```bash

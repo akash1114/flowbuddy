@@ -12,6 +12,8 @@ import ResolutionsListScreen from "./src/screens/ResolutionsListScreen";
 import MyWeekScreen from "./src/screens/MyWeekScreen";
 import ResolutionDashboardScreen from "./src/screens/ResolutionDashboardScreen";
 import ResolutionDashboardDetailScreen from "./src/screens/ResolutionDashboardDetailScreen";
+import SettingsPermissionsScreen from "./src/screens/SettingsPermissionsScreen";
+import AgentLogScreen from "./src/screens/AgentLogScreen";
 import type { RootStackParamList } from "./types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,6 +32,12 @@ function App() {
         />
         <Stack.Screen name="MyWeek" component={MyWeekScreen} options={{ title: "My Week" }} />
         <Stack.Screen name="Dashboard" component={ResolutionDashboardScreen} options={{ title: "Dashboard" }} />
+        <Stack.Screen
+          name="SettingsPermissions"
+          component={SettingsPermissionsScreen}
+          options={{ title: "Settings & Permissions" }}
+        />
+        <Stack.Screen name="AgentLog" component={AgentLogScreen} options={{ title: "Agent Log" }} />
         <Stack.Screen
           name="ResolutionDashboardDetail"
           component={ResolutionDashboardDetailScreen}
