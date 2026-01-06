@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     weekly_job_hour: int = 9
     weekly_job_minute: int = 0
     jobs_run_on_startup: bool = False
+    notifications_enabled: bool = False
+    notifications_provider: str = "noop"
 
 
 @lru_cache

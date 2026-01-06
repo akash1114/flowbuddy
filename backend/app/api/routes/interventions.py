@@ -26,6 +26,7 @@ from app.services.intervention_service import (
     load_latest_intervention,
     persist_intervention_preview,
 )
+from app.services.notifications.hooks import notify_intervention_snapshot
 from app.db.models.agent_action_log import AgentActionLog
 
 router = APIRouter()
@@ -104,7 +105,10 @@ def interventions_run(
         metadata={"user_id": str(payload.user_id), "force": payload.force},
     )
     log_metric("interventions.run.latency_ms", latency_ms, metadata={"user_id": str(payload.user_id)})
-    return _intervention_response_from_log(result.log)
+    response = _intervention_response_from_log(result.log)
+    if result.created:
+        notify_intervention_snapshot(db, result.log, request_id)
+    return response
 
 
 @router.get("/interventions/latest", response_model=InterventionPreviewResponse, tags=["interventions"])

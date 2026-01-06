@@ -24,6 +24,7 @@ from app.services.weekly_planner import (
     load_latest_weekly_plan,
     persist_weekly_plan_preview,
 )
+from app.services.notifications.hooks import notify_weekly_plan_snapshot
 from app.api.schemas.weekly_plan import MicroResolutionPayload, WeeklyPlanInputs
 from app.db.models.agent_action_log import AgentActionLog
 
@@ -103,7 +104,10 @@ def weekly_plan_run(
         metadata={"user_id": str(payload.user_id), "force": payload.force},
     )
     log_metric("weekly_plan.run.latency_ms", latency_ms, metadata={"user_id": str(payload.user_id)})
-    return _response_from_log(result.log)
+    response = _response_from_log(result.log)
+    if result.created:
+        notify_weekly_plan_snapshot(db, result.log, request_id)
+    return response
 
 
 @router.get("/weekly-plan/latest", response_model=WeeklyPlanPreviewResponse, tags=["weekly-plan"])

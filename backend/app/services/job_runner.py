@@ -18,6 +18,10 @@ from app.services.intervention_service import (
     get_intervention_preview,
     persist_intervention_preview,
 )
+from app.services.notifications.hooks import (
+    notify_weekly_plan_snapshot,
+    notify_intervention_snapshot,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +63,8 @@ def run_weekly_plan_for_user(db: Session, user_id: UUID, *, force: bool = False)
         request_id=None,
         force=force,
     )
+    if result.created:
+        notify_weekly_plan_snapshot(db, result.log, None)
     return result.created
 
 
@@ -99,6 +105,8 @@ def run_interventions_for_user(db: Session, user_id: UUID, *, force: bool = Fals
         request_id=None,
         force=force,
     )
+    if result.created:
+        notify_intervention_snapshot(db, result.log, None)
     return result.created
 
 

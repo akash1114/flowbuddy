@@ -228,3 +228,12 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
   2. In the mobile app, open **Settings** from Home, toggle “Pause coaching” or the per-feature switches.
   3. Inspect `GET /preferences` or the Settings screen footer to verify the `request_id` and persisted values.
   4. Trigger `/jobs/run-now` or wait for the scheduler; logs show `skipped_due_to_preferences` when a user is paused/disabled.
+
+## Notifications (stub / noop)
+- Enable via `NOTIFICATIONS_ENABLED=true` and `NOTIFICATIONS_PROVIDER=noop` in `backend/.env`.
+- When enabled, each newly-created weekly plan or intervention snapshot queues a no-op notification (logged as `Notification queued (noop)` plus an `AgentActionLog` entry with `action_type = notification_*`).
+- Notifications respect preferences:
+  - paused coaching → skipped with reason
+  - weekly/intervention toggles off → skipped
+  - interventions only notify when slippage is flagged
+- For now, `GET /notifications/config` returns the current provider/enabled flag so ops can verify the environment before real push integrations land.

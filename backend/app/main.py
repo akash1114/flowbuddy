@@ -12,6 +12,7 @@ from app.api.routes.weekly_plan import router as weekly_plan_router
 from app.api.routes.interventions import router as interventions_router
 from app.api.routes.preferences import router as preferences_router
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.notifications import router as notifications_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIDMiddleware
@@ -33,6 +34,7 @@ app.include_router(weekly_plan_router)
 app.include_router(interventions_router)
 app.include_router(jobs_router)
 app.include_router(preferences_router)
+app.include_router(notifications_router)
 
 
 @app.on_event("startup")
