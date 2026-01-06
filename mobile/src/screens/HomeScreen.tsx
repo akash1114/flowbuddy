@@ -43,6 +43,20 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={[styles.button, styles.secondary]}
+        onPress={() => navigation.navigate("WeeklyPlan")}
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Weekly Plan</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondary]}
+        onPress={() => navigation.navigate("Interventions")}
+      >
+        <Text style={[styles.buttonText, styles.secondaryText]}>Interventions</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondary]}
         onPress={() => navigation.navigate("SettingsPermissions")}
       >
         <Text style={[styles.buttonText, styles.secondaryText]}>Settings & Permissions</Text>

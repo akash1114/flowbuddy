@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     opik_enabled: bool = False
     opik_api_key: str | None = None
     opik_project: str = "flowbuddy"
+    scheduler_enabled: bool = False
+    scheduler_timezone: str = "UTC"
+    weekly_job_day: int = 6
+    weekly_job_hour: int = 9
+    weekly_job_minute: int = 0
+    jobs_run_on_startup: bool = False
 
 
 @lru_cache

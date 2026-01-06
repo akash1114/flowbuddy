@@ -9,6 +9,8 @@ export type RootStackParamList = {
   SettingsPermissions: undefined;
   AgentLog: undefined;
   ResolutionCreate: undefined;
+  WeeklyPlan: undefined;
+  Interventions: undefined;
   PlanReview: {
     resolutionId: string;
     initialResolution?: ResolutionResponse;

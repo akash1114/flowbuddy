@@ -16,6 +16,7 @@ dependencies = [
     "psycopg2-binary>=2.9.9",
     "alembic>=1.13.1",
     "opik>=1.9.0",
+    "apscheduler>=3.10.4",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,9 @@ dev = [
     "pytest>=7.4",
     "httpx>=0.25",
 ]
+
+[project.scripts]
+flowbuddy-scheduler = "app.worker.scheduler_main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

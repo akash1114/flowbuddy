@@ -37,6 +37,12 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
    cd backend
    python -m uvicorn app.main:app --reload
    ```
+3. (Optional) Start the scheduler worker in another shell when `SCHEDULER_ENABLED=true`:
+   ```bash
+   cd backend
+   python -m app.worker.scheduler_main
+   # or, if you've installed the project: flowbuddy-scheduler
+   ```
 3. Run tests:
    ```bash
    cd backend
@@ -197,3 +203,7 @@ Hackathon-friendly scaffold containing a FastAPI backend plus Expo mobile client
 ## Next Steps
 - Ticket 1: initialize Alembic inside `backend/alembic/` and wire migrations.
 - Expand API routers and mobile screens as new tickets arrive.
+- **Job Ops (dev-only helpers)**
+  - `GET /jobs`: surfaces scheduler configuration (enabled flag, cron settings) for observability dashboards.
+  - `POST /jobs/run-now`: triggers `weekly_plan` or `interventions` jobs synchronously when `DEBUG=true`. Body example: `{ "job": "weekly_plan", "force": false }`.
+  - Use these endpoints for local smoke tests; production automation should invoke the standalone scheduler worker instead.

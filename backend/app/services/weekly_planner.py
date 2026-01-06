@@ -22,6 +22,12 @@ class WeeklyPlanPreview:
     micro_resolution: MicroResolutionPayload
 
 
+@dataclass
+class SnapshotResult:
+    log: AgentActionLog
+    created: bool
+
+
 def get_weekly_plan_preview(db: Session, user_id: UUID) -> WeeklyPlanPreview:
     today = date.today()
     next_week_start = today + timedelta(days=(7 - today.weekday()) % 7 or 7)
@@ -67,16 +73,32 @@ def persist_weekly_plan_preview(
     user_id: UUID,
     preview: WeeklyPlanPreview,
     request_id: str | None,
-) -> AgentActionLog:
+    force: bool = False,
+) -> SnapshotResult:
     user = db.get(User, user_id)
     if not user:
         raise ValueError("User not found")
 
+    week_start_iso = preview.week[0].isoformat()
+    week_end_iso = preview.week[1].isoformat()
+    if not force:
+        existing = _find_existing_snapshot(
+            db,
+            user_id=user_id,
+            action_type="weekly_plan_generated",
+            week_start=week_start_iso,
+            week_end=week_end_iso,
+        )
+        if existing:
+            return SnapshotResult(log=existing, created=False)
+
     payload = {
         "user_id": str(user_id),
+        "week_start": week_start_iso,
+        "week_end": week_end_iso,
         "week": {
-            "start": preview.week[0].isoformat(),
-            "end": preview.week[1].isoformat(),
+            "start": week_start_iso,
+            "end": week_end_iso,
         },
         "inputs": preview.inputs.model_dump(),
         "micro_resolution": preview.micro_resolution.model_dump(),
@@ -93,7 +115,7 @@ def persist_weekly_plan_preview(
     db.add(log)
     db.commit()
     db.refresh(log)
-    return log
+    return SnapshotResult(log=log, created=True)
 
 
 def load_latest_weekly_plan(db: Session, user_id: UUID) -> AgentActionLog | None:
@@ -106,6 +128,27 @@ def load_latest_weekly_plan(db: Session, user_id: UUID) -> AgentActionLog | None
         .order_by(AgentActionLog.created_at.desc())
         .first()
     )
+
+
+def _find_existing_snapshot(
+    db: Session,
+    *,
+    user_id: UUID,
+    action_type: str,
+    week_start: str,
+    week_end: str,
+) -> AgentActionLog | None:
+    logs = (
+        db.query(AgentActionLog)
+        .filter(AgentActionLog.user_id == user_id, AgentActionLog.action_type == action_type)
+        .order_by(AgentActionLog.created_at.desc())
+        .all()
+    )
+    for log in logs:
+        payload = log.action_payload or {}
+        if payload.get("week_start") == week_start and payload.get("week_end") == week_end:
+            return log
+    return None
 
 
 def _collect_recent_stats(tasks: List[Task]) -> Dict[str, float | int | List[str]]:

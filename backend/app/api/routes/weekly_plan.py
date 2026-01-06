@@ -77,14 +77,24 @@ def weekly_plan_run(
     with trace("weekly_plan.run", metadata=metadata, user_id=str(payload.user_id), request_id=request_id):
         preview = get_weekly_plan_preview(db, payload.user_id)
         try:
-            log = persist_weekly_plan_preview(db, user_id=payload.user_id, preview=preview, request_id=request_id)
+            result = persist_weekly_plan_preview(
+                db,
+                user_id=payload.user_id,
+                preview=preview,
+                request_id=request_id,
+            )
         except ValueError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     latency_ms = (perf_counter() - start) * 1000
     log_metric("weekly_plan.run.success", 1, metadata={"user_id": str(payload.user_id)})
+    log_metric(
+        "weekly_plan.run.snapshot_created",
+        1 if result.created else 0,
+        metadata={"user_id": str(payload.user_id)},
+    )
     log_metric("weekly_plan.run.latency_ms", latency_ms, metadata={"user_id": str(payload.user_id)})
-    return _response_from_log(log)
+    return _response_from_log(result.log)
 
 
 @router.get("/weekly-plan/latest", response_model=WeeklyPlanPreviewResponse, tags=["weekly-plan"])
@@ -109,10 +119,25 @@ def weekly_plan_latest(
 
 def _response_from_log(log: AgentActionLog) -> WeeklyPlanPreviewResponse:
     payload = log.action_payload or {}
+    week_payload = payload.get("week") or {
+        "start": payload.get("week_start"),
+        "end": payload.get("week_end"),
+    }
+    inputs_payload = payload.get("inputs") or {}
+    micro_payload = payload.get("micro_resolution") or {
+        "title": "Awaiting plan",
+        "why_this": "",
+        "suggested_week_1_tasks": [],
+    }
     return WeeklyPlanPreviewResponse(
         user_id=payload.get("user_id", log.user_id),
-        week=payload.get("week"),
-        inputs=WeeklyPlanInputs(**payload.get("inputs", {})),
-        micro_resolution=MicroResolutionPayload(**payload.get("micro_resolution", {})),
+        week=week_payload,
+        inputs=WeeklyPlanInputs(
+            active_resolutions=inputs_payload.get("active_resolutions", 0),
+            active_tasks_total=inputs_payload.get("active_tasks_total", 0),
+            active_tasks_completed=inputs_payload.get("active_tasks_completed", 0),
+            completion_rate=inputs_payload.get("completion_rate", 0.0),
+        ),
+        micro_resolution=MicroResolutionPayload(**micro_payload),
         request_id=payload.get("request_id", ""),
     )

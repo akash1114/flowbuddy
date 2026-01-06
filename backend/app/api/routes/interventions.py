@@ -81,7 +81,7 @@ def interventions_run(
     with trace("interventions.run", metadata=metadata, user_id=str(payload.user_id), request_id=request_id):
         preview = get_intervention_preview(db, payload.user_id)
         try:
-            log = persist_intervention_preview(
+            result = persist_intervention_preview(
                 db,
                 user_id=payload.user_id,
                 preview=preview,
@@ -92,8 +92,13 @@ def interventions_run(
 
     latency_ms = (perf_counter() - start) * 1000
     log_metric("interventions.run.success", 1, metadata={"user_id": str(payload.user_id)})
+    log_metric(
+        "interventions.run.snapshot_created",
+        1 if result.created else 0,
+        metadata={"user_id": str(payload.user_id)},
+    )
     log_metric("interventions.run.latency_ms", latency_ms, metadata={"user_id": str(payload.user_id)})
-    return _intervention_response_from_log(log)
+    return _intervention_response_from_log(result.log)
 
 
 @router.get("/interventions/latest", response_model=InterventionPreviewResponse, tags=["interventions"])
@@ -118,11 +123,21 @@ def interventions_latest(
 
 def _intervention_response_from_log(log: AgentActionLog) -> InterventionPreviewResponse:
     payload = log.action_payload or {}
+    week_payload = payload.get("week") or {
+        "start": payload.get("week_start"),
+        "end": payload.get("week_end"),
+    }
     card_payload = payload.get("card")
+    slippage_payload = payload.get("slippage") or {
+        "flagged": False,
+        "reason": None,
+        "completion_rate": 0.0,
+        "missed_scheduled": 0,
+    }
     return InterventionPreviewResponse(
         user_id=payload.get("user_id", log.user_id),
-        week=payload.get("week"),
-        slippage=SlippagePayload(**payload.get("slippage", {})),
+        week=week_payload,
+        slippage=SlippagePayload(**slippage_payload),
         card=InterventionCard(**card_payload) if card_payload else None,
         request_id=payload.get("request_id", ""),
     )
