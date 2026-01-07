@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
+} from "react-native";
+import { Sun, Coffee, Circle } from "lucide-react-native";
 import { getWeeklyPlanLatest, runWeeklyPlan, WeeklyPlanResponse } from "../api/weeklyPlan";
 import { useUserId } from "../state/user";
 import { useNavigation } from "@react-navigation/native";
@@ -58,14 +68,16 @@ export default function WeeklyPlanScreen() {
     }
   };
 
-  if (userLoading || loading && !refreshing) {
+  if ((userLoading || loading) && !refreshing) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Fetching your weekly snapshot…</Text>
       </View>
     );
   }
+
+  const dateLabel = plan ? formatRange(plan.week.start, plan.week.end) : "";
 
   return (
     <ScrollView
@@ -88,20 +100,26 @@ export default function WeeklyPlanScreen() {
       ) : null}
 
       {plan ? (
-        <View style={styles.card}>
-          <Text style={styles.week}>{plan.week.start} → {plan.week.end}</Text>
-          <Text style={styles.sectionLabel}>Focus</Text>
-          <Text style={styles.planTitle}>{plan.micro_resolution.title}</Text>
-          <Text style={styles.body}>{plan.micro_resolution.why_this}</Text>
+        <>
+          <View style={styles.focusCard}>
+            <Text style={styles.dateLabel}>{dateLabel}</Text>
+            <Text style={styles.focusTitle}>{plan.micro_resolution.title}</Text>
+            <Text style={styles.focusBody}>{plan.micro_resolution.why_this}</Text>
+          </View>
 
-          <Text style={[styles.sectionLabel, styles.mt16]}>Suggested Tasks</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Suggested Actions</Text>
+          </View>
           {plan.micro_resolution.suggested_week_1_tasks.map((task) => (
             <View key={task.title} style={styles.taskRow}>
-              <Text style={styles.taskTitle}>{task.title}</Text>
-              <Text style={styles.taskMeta}>
-                {task.duration_min ? `${task.duration_min} min` : "Flexible"}
-                {task.suggested_time ? ` · ${task.suggested_time}` : ""}
-              </Text>
+              <Circle size={10} color="#6B8DBF" />
+              <View style={styles.taskContent}>
+                <Text style={styles.taskTitle}>{task.title}</Text>
+                <Text style={styles.taskMeta}>
+                  {task.duration_min ? `${task.duration_min} min` : "Flexible"}
+                  {task.suggested_time ? ` · ${task.suggested_time}` : ""}
+                </Text>
+              </View>
             </View>
           ))}
 
@@ -109,35 +127,39 @@ export default function WeeklyPlanScreen() {
             <Text style={styles.debugLabel}>Req ID: {requestId || plan.request_id || "—"}</Text>
             <Text style={styles.debugLabel}>Completion: {(plan.inputs.completion_rate * 100).toFixed(0)}%</Text>
           </View>
-        </View>
+        </>
       ) : null}
 
       {!plan ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No weekly plan yet</Text>
-          <Text style={styles.helper}>When you’re ready, generate a gentle focus for next week.</Text>
+        <View style={styles.emptyState}>
+          <Sun size={48} color="#FDBA74" />
+          <Text style={styles.emptyTitle}>Ready to plan your week?</Text>
+          <Text style={styles.helper}>Let&apos;s find your focus.</Text>
           <TouchableOpacity
             style={[styles.button, running && styles.buttonDisabled]}
             onPress={handleGenerate}
             disabled={running}
           >
-            {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Generate Weekly Plan</Text>}
+            {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Generate Plan</Text>}
           </TouchableOpacity>
         </View>
-      ) : null}
-
-      {plan ? (
-        <TouchableOpacity style={[styles.button, running && styles.buttonDisabled]} onPress={handleGenerate} disabled={running}>
-          {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Refresh Plan</Text>}
-        </TouchableOpacity>
       ) : null}
     </ScrollView>
   );
 }
 
+function formatRange(start: string, end: string): string {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const formatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+  const upper = (date: Date) => formatter.format(date).toUpperCase();
+  return `${upper(startDate)} – ${upper(endDate)}`;
+}
+
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    backgroundColor: "#FAFAF8",
     gap: 16,
   },
   center: {
@@ -145,11 +167,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+    backgroundColor: "#FAFAF8",
   },
   title: {
-    fontSize: 28,
-    fontWeight: "600",
-    color: "#111",
+    fontSize: 30,
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    color: "#2D3748",
   },
   headerRow: {
     flexDirection: "row",
@@ -161,58 +184,80 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   linkText: {
-    color: "#1a73e8",
+    color: "#6B8DBF",
     fontWeight: "600",
   },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 16,
+  focusCard: {
     backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    marginBottom: 12,
   },
-  week: {
-    fontWeight: "600",
-    color: "#1a73e8",
-    marginBottom: 8,
+  dateLabel: {
+    fontSize: 12,
+    textTransform: "uppercase",
+    color: "#6B7280",
+    letterSpacing: 1,
   },
-  sectionLabel: {
-    fontWeight: "600",
+  focusTitle: {
+    fontSize: 28,
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    color: "#1F2933",
     marginTop: 8,
-    color: "#333",
   },
-  planTitle: {
-    fontSize: 20,
+  focusBody: {
+    marginTop: 12,
+    color: "#6B7280",
+    fontStyle: "italic",
+    fontSize: 16,
+  },
+  sectionHeader: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "600",
-    marginTop: 4,
-  },
-  body: {
-    marginTop: 6,
-    color: "#444",
-  },
-  mt16: {
-    marginTop: 16,
+    color: "#1F2933",
   },
   taskRow: {
-    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    marginBottom: 8,
+    gap: 12,
+  },
+  taskContent: {
+    flex: 1,
   },
   taskTitle: {
-    fontWeight: "500",
-    color: "#222",
+    fontWeight: "600",
+    color: "#1F2933",
   },
   taskMeta: {
-    color: "#666",
-    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
   },
   button: {
-    marginTop: 12,
-    backgroundColor: "#1a73e8",
+    marginTop: 16,
+    backgroundColor: "#6B8DBF",
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: "center",
+    paddingHorizontal: 24,
   },
   buttonDisabled: {
-    backgroundColor: "#8fb5f8",
+    backgroundColor: "#A5B8D9",
   },
   buttonText: {
     color: "#fff",
@@ -220,20 +265,23 @@ const styles = StyleSheet.create({
   },
   helper: {
     marginTop: 8,
-    color: "#666",
+    color: "#6B7280",
+    textAlign: "center",
   },
-  emptyCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#dfe3ec",
-    padding: 16,
-    alignItems: "center",
+  emptyState: {
+    marginTop: 24,
     backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FDEAD8",
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#111",
+    color: "#1F2933",
+    marginTop: 12,
   },
   error: {
     color: "#c62828",
@@ -265,5 +313,6 @@ const styles = StyleSheet.create({
   debugLabel: {
     fontSize: 12,
     color: "#555",
+    textAlign: "center",
   },
 });
