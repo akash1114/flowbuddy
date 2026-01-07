@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,6 +40,8 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
     mode: "date" | "time";
     value: Date;
   } | null>(null);
+
+  const milestones = useMemo(() => plan?.plan.milestones ?? [], [plan]);
 
   const updateTaskField = (taskId: string, field: keyof EditableTask, value: string) => {
     setTasks((prev) =>
@@ -163,117 +167,130 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
 
   if ((planLoading || userLoading) && !plan) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
+      <View style={styles.loadingState}>
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Generating a friendly outline…</Text>
       </View>
     );
   }
 
+  const focusForWeekOne = milestones.find((milestone) => milestone.week === 1)?.focus ?? milestones[0]?.focus ?? "";
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {plan ? (
-        <>
-          <Text style={styles.title}>{plan.title}</Text>
-          <Text style={styles.subtitle}>
-            {plan.type} · {plan.plan.weeks} weeks
-          </Text>
-        </>
-      ) : null}
-
-      {combinedError ? <Text style={styles.error}>{combinedError}</Text> : null}
-
-      {plan ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Milestones</Text>
-          {plan.plan.milestones.map((milestone) => (
-            <View key={milestone.week} style={styles.milestone}>
-              <Text style={styles.weekHeading}>Week {milestone.week}</Text>
-              <Text style={styles.focus}>{milestone.focus}</Text>
-              {milestone.success_criteria.map((criteria) => (
-                <Text key={criteria} style={styles.criteria}>
-                  • {criteria}
-                </Text>
-              ))}
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <View style={styles.screen}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          {plan ? (
+            <View style={styles.header}>
+              <Text style={styles.heroTitle}>Proposed Plan</Text>
+              <Text style={styles.heroSubtitle}>Goal: {plan.title}</Text>
             </View>
-          ))}
-        </View>
-      ) : null}
+          ) : null}
 
-      {tasks.length ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Week 1 Tasks</Text>
-          {tasks.map((task) => (
-            <View key={task.id} style={styles.taskBlock}>
-              <TextInput
-                style={styles.taskTitle}
-                value={task.title}
-                onChangeText={(value) => updateTaskField(task.id, "title", value)}
-                placeholder="Task title"
-                editable={!pending && !success}
-              />
-              <View style={styles.inlineInputs}>
-                <TouchableOpacity
-                  style={[styles.inlineInput, styles.flex, styles.pickerInput]}
-                  onPress={() => openPicker(task, "date")}
-                  disabled={pending || !!success}
-                >
-                  <Text style={styles.pickerValue}>{task.scheduled_day || "Select date"}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.inlineInput, styles.flex, styles.pickerInput]}
-                  onPress={() => openPicker(task, "time")}
-                  disabled={pending || !!success}
-                >
-                  <Text style={styles.pickerValue}>{task.scheduled_time || "Select time"}</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.inlineInput, styles.flex]}
-                  placeholder="Minutes"
-                  keyboardType="number-pad"
-                  value={task.duration_min}
-                  onChangeText={(value) => updateTaskField(task.id, "duration_min", value.replace(/[^0-9]/g, ""))}
-                  editable={!pending && !success}
-                />
+          {combinedError ? <Text style={styles.error}>{combinedError}</Text> : null}
+
+          {plan ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitleSerif}>Vision</Text>
+                <Text style={styles.sectionHelper}>{plan.plan.weeks} weeks</Text>
               </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timeline}>
+                {milestones.map((milestone) => {
+                  const active = milestone.week === 1;
+                  return (
+                    <View key={milestone.week} style={[styles.weekPill, active && styles.weekPillActive]}>
+                      <Text style={[styles.weekLabel, active && styles.weekLabelActive]}>W{milestone.week}</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+              <Text style={styles.focusLabel}>Focus: {focusForWeekOne || "Reinforce your routine"}</Text>
             </View>
-          ))}
-        </View>
-      ) : null}
+          ) : null}
 
-      {success ? (
-        <View style={styles.successCard}>
-          <Text style={styles.sectionTitle}>Activated Tasks</Text>
-          {success.tasks_activated?.map((task) => (
-            <View key={task.id} style={styles.taskSummary}>
-              <Text style={styles.summaryTitle}>{task.title}</Text>
-              <Text style={styles.summaryMeta}>
-                {task.scheduled_day || "Flexible"} · {task.scheduled_time || "Anytime"} · {task.duration_min ?? "—"} min
-              </Text>
+          {tasks.length ? (
+            <View style={styles.taskSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitleSerif}>Week 1 Tasks</Text>
+                <Text style={styles.sectionHelper}>Editable</Text>
+              </View>
+              {tasks.map((task) => (
+                <View key={task.id} style={styles.taskCard}>
+                  <TextInput
+                    style={styles.taskInput}
+                    value={task.title}
+                    onChangeText={(value) => updateTaskField(task.id, "title", value)}
+                    placeholder="Describe the task..."
+                    editable={!pending && !success}
+                  />
+                  <View style={styles.taskControls}>
+                    <TouchableOpacity
+                      style={styles.pillButton}
+                      onPress={() => openPicker(task, "date")}
+                      disabled={pending || !!success}
+                    >
+                      <Text style={styles.pillText}>{task.scheduled_day || "Pick date"}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.pillButton}
+                      onPress={() => openPicker(task, "time")}
+                      disabled={pending || !!success}
+                    >
+                      <Text style={styles.pillText}>{task.scheduled_time || "Pick time"}</Text>
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.durationInput}
+                      placeholder="Minutes"
+                      keyboardType="number-pad"
+                      value={task.duration_min}
+                      onChangeText={(value) => updateTaskField(task.id, "duration_min", value.replace(/[^0-9]/g, ""))}
+                      editable={!pending && !success}
+                    />
+                  </View>
+                </View>
+              ))}
+              <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert("Coming soon", "Task creation is in beta.")}>
+                <Text style={styles.addButtonText}>+ Add another task</Text>
+              </TouchableOpacity>
             </View>
-          ))}
-          <TouchableOpacity style={[styles.button, styles.primary]} onPress={() => navigation.navigate("Home")}>
-            <Text style={styles.buttonText}>Back to Home</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={[styles.button, styles.primary, acceptDisabled && styles.buttonDisabled]} onPress={handleAccept} disabled={acceptDisabled}>
-            {pending ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Accept Plan</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.secondary]} onPress={handleRegenerate} disabled={pending}>
-            <Text style={[styles.buttonText, styles.secondaryText]}>Regenerate</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.ghost]} onPress={handleReject} disabled={pending}>
-            <Text style={styles.ghostText}>Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          ) : null}
+
+          {success ? (
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>Plan Activated</Text>
+              <Text style={styles.successSubtitle}>Week 1 tasks are now live in My Week.</Text>
+              <TouchableOpacity style={styles.successButton} onPress={() => navigation.navigate("Home")}>
+                <Text style={styles.successButtonText}>Back to Home</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        {!success ? (
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.primaryButton, acceptDisabled && styles.primaryButtonDisabled]}
+              onPress={handleAccept}
+              disabled={acceptDisabled}
+            >
+              {pending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Start Resolution</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleRegenerate} disabled={pending} style={styles.secondaryLink}>
+              <Text style={styles.secondaryButtonText}>Regenerate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleReject} disabled={pending}>
+              <Text style={styles.rejectText}>Reject Plan</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+
       {pickerState ? (
         <Modal transparent animationType="fade">
           <View style={styles.pickerBackdrop}>
             <View style={styles.pickerCard}>
-              <Text style={styles.sectionTitle}>{pickerState.mode === "date" ? "Pick a date" : "Pick a time"}</Text>
+              <Text style={styles.sectionTitleSerif}>{pickerState.mode === "date" ? "Pick a date" : "Pick a time"}</Text>
               <DateTimePicker
                 value={pickerState.value}
                 mode={pickerState.mode}
@@ -288,7 +305,7 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
                 <TouchableOpacity style={styles.modalButton} onPress={closePicker}>
                   <Text style={styles.secondaryText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, styles.primary]} onPress={confirmPicker}>
+                <TouchableOpacity style={[styles.modalButton, styles.modalPrimary]} onPress={confirmPicker}>
                   <Text style={styles.buttonText}>Save</Text>
                 </TouchableOpacity>
               </View>
@@ -296,174 +313,244 @@ export default function PlanReviewScreen({ route, navigation }: Props) {
           </View>
         </Modal>
       ) : null}
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#FAFAF8",
+  },
   container: {
     padding: 20,
-    flexGrow: 1,
+    paddingBottom: 140,
+    gap: 20,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
-    color: "#111",
+  header: {
+    gap: 6,
   },
-  subtitle: {
-    color: "#555",
-    marginTop: 4,
-    marginBottom: 16,
+  heroTitle: {
+    fontSize: 30,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+  },
+  heroSubtitle: {
+    color: "#6B7280",
+    fontSize: 16,
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
   },
   error: {
-    color: "#c62828",
-    marginBottom: 12,
+    color: "#C53030",
   },
-  card: {
-    marginTop: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e1e3e8",
-    padding: 16,
+  section: {
     backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  sectionTitle: {
-    fontWeight: "600",
-    marginBottom: 8,
-    fontSize: 16,
-  },
-  milestone: {
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
     marginBottom: 12,
   },
-  weekHeading: {
+  sectionTitleSerif: {
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    fontSize: 18,
+    color: "#1F2933",
+  },
+  sectionHelper: {
+    color: "#94A3B8",
+    fontSize: 13,
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+  },
+  timeline: {
+    paddingVertical: 4,
+    gap: 8,
+  },
+  weekPill: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#E2E8F0",
+  },
+  weekPillActive: {
+    backgroundColor: "#6B8DBF",
+  },
+  weekLabel: {
     fontWeight: "600",
-    color: "#1a73e8",
+    color: "#475569",
   },
-  focus: {
-    marginTop: 4,
-    color: "#222",
+  weekLabelActive: {
+    color: "#fff",
   },
-  criteria: {
-    color: "#444",
-    marginLeft: 8,
-    marginTop: 2,
+  focusLabel: {
+    marginTop: 14,
+    color: "#334155",
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
   },
-  taskBlock: {
-    marginBottom: 16,
-  },
-  taskTitle: {
-    borderWidth: 1,
-    borderColor: "#d7dae0",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-  },
-  inlineInputs: {
-    flexDirection: "row",
-    columnGap: 8,
-  },
-  inlineInput: {
-    borderWidth: 1,
-    borderColor: "#d7dae0",
-    borderRadius: 10,
-    padding: 10,
-  },
-  pickerInput: {
-    justifyContent: "center",
-  },
-  pickerValue: {
-    color: "#111",
-  },
-  flex: {
-    flex: 1,
-  },
-  actionsRow: {
-    marginTop: 16,
+  taskSection: {
     gap: 12,
   },
-  button: {
-    paddingVertical: 14,
+  taskCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    gap: 12,
+  },
+  taskInput: {
+    fontSize: 16,
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    borderBottomWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingBottom: 6,
+  },
+  taskControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  pillButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+  },
+  pillText: {
+    color: "#475569",
+    fontSize: 13,
+  },
+  durationInput: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  addButton: {
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#CBD5F5",
     alignItems: "center",
   },
-  primary: {
-    backgroundColor: "#1a73e8",
-  },
-  buttonDisabled: {
-    backgroundColor: "#8fb5f8",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  secondary: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
-  },
-  secondaryText: {
-    color: "#1a73e8",
-  },
-  ghost: {
-    backgroundColor: "transparent",
-  },
-  ghostText: {
-    color: "#c62828",
+  addButtonText: {
+    color: "#6B8DBF",
     fontWeight: "600",
   },
   successCard: {
-    marginTop: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#c8e6c9",
-    padding: 16,
-    backgroundColor: "#f1f8e9",
+    backgroundColor: "#9DB8A0",
+    borderRadius: 20,
+    padding: 20,
+    gap: 8,
   },
-  taskSummary: {
-    marginBottom: 12,
+  successTitle: {
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    fontSize: 20,
+    color: "#0F172A",
   },
-  summaryTitle: {
+  successSubtitle: {
+    color: "#0F172A",
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+  },
+  successButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: "#1F2933",
+    alignItems: "center",
+  },
+  successButtonText: {
+    color: "#fff",
     fontWeight: "600",
   },
-  summaryMeta: {
-    color: "#555",
-    marginTop: 2,
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === "ios" ? 32 : 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FAFAF8",
+    gap: 8,
   },
-  center: {
-    flex: 1,
+  primaryButton: {
+    paddingVertical: 14,
+    borderRadius: 999,
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#6B8DBF",
   },
-  helper: {
-    marginTop: 8,
-    color: "#555",
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  secondaryLink: {
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "#6B8DBF",
+    fontWeight: "600",
+  },
+  rejectText: {
+    color: "#94A3B8",
+    textAlign: "center",
   },
   pickerBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
+    padding: 24,
   },
   pickerCard: {
-    width: "100%",
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 20,
   },
   pickerActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 12,
     marginTop: 12,
   },
   modalButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
+  },
+  modalPrimary: {
+    backgroundColor: "#6B8DBF",
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  secondaryText: {
+    color: "#6B8DBF",
+    fontWeight: "600",
+  },
+  helper: {
+    marginTop: 8,
+    color: "#666",
+  },
+  loadingState: {
+    flex: 1,
+    backgroundColor: "#FAFAF8",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
   },
 });
 

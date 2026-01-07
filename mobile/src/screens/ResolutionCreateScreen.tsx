@@ -67,7 +67,7 @@ export default function ResolutionCreateScreen() {
         text: trimmed,
         duration_weeks: durationNumber,
       });
-      navigation.replace("PlanReview", { resolutionId: resolution.id, initialResolution: resolution });
+      navigation.navigate("PlanReview", { resolutionId: resolution.id, initialResolution: resolution });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create resolution. Please try again.");
     } finally {
