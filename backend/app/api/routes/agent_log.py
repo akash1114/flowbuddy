@@ -134,6 +134,7 @@ def _derive_summary(action_type: str, payload: dict[str, Any]) -> str:
         "resolution_approved": "Plan approved",
         "resolution_rejected": "Plan rejected",
         "resolution_regenerate_requested": "Plan regenerated",
+        "brain_dump_ingested": "Brain dump captured",
     }
     if action_type in action_map:
         return action_map[action_type]

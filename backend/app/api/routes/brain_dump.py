@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.schemas.brain_dump import BrainDumpRequest, BrainDumpResponse, BrainDumpSignals
 from app.db.deps import get_db
 from app.db.models.brain_dump import BrainDump
+from app.db.models.agent_action_log import AgentActionLog
 from app.observability.metrics import log_metric
 from app.observability.tracing import trace
 from app.services.brain_dump_extractor import ExtractionResult, extract_signals
@@ -30,6 +31,7 @@ def ingest_brain_dump(request: BrainDumpRequest, http_request: Request, db: Sess
     if not text:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="text must not be empty")
     text_length = len(text)
+    request_id = getattr(http_request.state, "request_id", None)
 
     base_metadata: Dict[str, Any] = {
         "route": "/brain-dump",
@@ -39,12 +41,7 @@ def ingest_brain_dump(request: BrainDumpRequest, http_request: Request, db: Sess
 
     extractor_result = _default_extraction()
 
-    with trace(
-        "brain_dump.processing",
-        metadata=base_metadata,
-        user_id=str(user_id),
-        request_id=getattr(http_request.state, "request_id", None),
-    ) as span:
+    with trace("brain_dump.processing", metadata=base_metadata, user_id=str(user_id), request_id=request_id) as span:
         user = get_or_create_user(db, user_id)
 
         try:
@@ -77,6 +74,21 @@ def ingest_brain_dump(request: BrainDumpRequest, http_request: Request, db: Sess
             actionable=extractor_result.actionable,
         )
         db.add(brain_dump)
+        db.flush()
+
+        log_entry = AgentActionLog(
+            user_id=user_id,
+            action_type="brain_dump_ingested",
+            action_payload={
+                "brain_dump_id": str(brain_dump.id),
+                "actionable": extractor_result.actionable,
+                "signals": extractor_result.signals,
+                "request_id": request_id,
+            },
+            reason="Brain dump captured",
+            undo_available=False,
+        )
+        db.add(log_entry)
         try:
             db.commit()
         except IntegrityError as exc:  # pragma: no cover - DB constraint guard

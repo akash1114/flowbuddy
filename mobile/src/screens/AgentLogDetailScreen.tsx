@@ -43,7 +43,7 @@ export default function AgentLogDetailScreen() {
   if (userLoading || loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Loading log entry…</Text>
       </View>
     );
@@ -72,19 +72,27 @@ export default function AgentLogDetailScreen() {
   const createdAt = new Date(entry.created_at).toLocaleString();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.summary}>{entry.summary}</Text>
+    <ScrollView contentContainerStyle={styles.container} stickyHeaderIndices={[]}>
+      <View style={styles.header}>
+        <Text style={styles.headerLabel}>Action Detail</Text>
+        <Text style={styles.timestamp}>{createdAt}</Text>
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.summary}>{entry.summary}</Text>
+        <Text style={[styles.badge, styles.badgeBlue]}>{entry.action_type}</Text>
+      </View>
+
       <View style={styles.metaCard}>
         <InfoRow label="Action type" value={entry.action_type} />
-        <InfoRow label="Created at" value={createdAt} />
         <InfoRow label="Undo available" value={entry.undo_available ? "Yes" : "No"} />
         {entry.request_id ? <InfoRow label="request_id" value={entry.request_id} /> : null}
         {requestId ? <InfoRow label="request_id header" value={requestId} /> : null}
       </View>
 
       <View style={styles.payloadBox}>
-        <Text style={styles.payloadLabel}>Payload</Text>
-        <ScrollView horizontal>
+        <Text style={styles.payloadLabel}>System Payload</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator>
           <Text style={styles.payloadText}>{payloadText}</Text>
         </ScrollView>
       </View>
@@ -103,15 +111,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 20,
     gap: 16,
-    backgroundColor: "#f6f7fb",
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
+    backgroundColor: "#FAFAF8",
   },
   helper: {
     marginTop: 8,
@@ -134,17 +143,53 @@ const styles = StyleSheet.create({
     color: "#c62828",
     fontWeight: "600",
   },
-  summary: {
+  header: {
+    gap: 4,
+  },
+  headerLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: "#6B7280",
+  },
+  timestamp: {
     fontSize: 22,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+  },
+  summaryCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    gap: 10,
+  },
+  summary: {
+    fontSize: 20,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+  },
+  badge: {
+    alignSelf: "flex-start",
+    fontSize: 12,
+    textTransform: "uppercase",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     fontWeight: "600",
-    color: "#111",
+  },
+  badgeBlue: {
+    backgroundColor: "#DBEAFE",
+    color: "#1D4ED8",
   },
   metaCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: "#fff",
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#e0e5f2",
+    borderColor: "#F3F4F6",
     gap: 8,
   },
   infoRow: {
@@ -154,7 +199,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: "#555",
+    color: "#6B7280",
   },
   infoValue: {
     fontSize: 14,
@@ -164,21 +209,22 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   payloadBox: {
-    borderRadius: 12,
-    backgroundColor: "#fff",
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
     borderWidth: 1,
-    borderColor: "#e0e5f2",
-    padding: 12,
+    borderColor: "#E5E7EB",
+    padding: 16,
   },
   payloadLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
+    color: "#4B5563",
     marginBottom: 8,
   },
   payloadText: {
     fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
     fontSize: 12,
-    color: "#222",
+    color: "#111",
     minWidth: 250,
   },
 });
