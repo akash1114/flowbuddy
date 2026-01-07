@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Vibration } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -10,6 +10,15 @@ import * as tasksApi from "../api/tasks";
 import type { TaskItem } from "../api/tasks";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+
+const PRAISE_MESSAGES = [
+  "Great job!",
+  "Keep the flow!",
+  "One step closer!",
+  "Momentum building!",
+  "Small wins matter!",
+  "Nice work!",
+];
 
 type HomeNavigation = NativeStackNavigationProp<RootStackParamList, "Home">;
 
@@ -40,6 +49,8 @@ export default function HomeScreen() {
   const [fabOpen, setFabOpen] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [praise, setPraise] = useState<string | null>(null);
+  const praiseOpacity = useRef(new Animated.Value(0)).current;
 
   const greeting = useMemo(() => getGreeting(new Date()), []);
   const subtitleDate = useMemo(() => formatSubtitleDate(new Date()), []);
@@ -88,6 +99,28 @@ export default function HomeScreen() {
     }
   }, [fetchData, userLoading, userId]);
 
+  const sortedTasks = useMemo(() => {
+    return [...todayFlow].sort((a, b) => {
+      if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
+      if (!a.is_completed && !b.is_completed) {
+        if (a.scheduled_time && b.scheduled_time) return a.scheduled_time.localeCompare(b.scheduled_time);
+        if (a.scheduled_time) return -1;
+        if (b.scheduled_time) return 1;
+        return a.title.localeCompare(b.title);
+      }
+      return a.title.localeCompare(b.title);
+    });
+  }, [todayFlow]);
+
+  const sortedFocus = useMemo(() => {
+    return [...focusList].sort((a, b) => {
+      const aDone = a.completion_rate >= 1;
+      const bDone = b.completion_rate >= 1;
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      return a.title.localeCompare(b.title);
+    });
+  }, [focusList]);
+
   const handleRefresh = () => {
     if (!userId) {
       return;
@@ -102,6 +135,16 @@ export default function HomeScreen() {
     setTodayFlow((prev) => prev.map((task) => (task.id === taskId ? { ...task, is_completed: isCompleted } : task)));
     try {
       await tasksApi.updateTaskCompletion(taskId, userId, isCompleted);
+      if (isCompleted) {
+        Vibration.vibrate(10);
+        const message = PRAISE_MESSAGES[Math.floor(Math.random() * PRAISE_MESSAGES.length)];
+        setPraise(message);
+        Animated.timing(praiseOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
+          setTimeout(() => {
+            Animated.timing(praiseOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setPraise(null));
+          }, 2000);
+        });
+      }
     } catch (err) {
       setTodayFlow((prev) =>
         prev.map((task) => (task.id === taskId ? { ...task, is_completed: !isCompleted } : task)),
@@ -110,10 +153,6 @@ export default function HomeScreen() {
     } finally {
       setUpdatingTaskId(null);
     }
-  };
-
-  const handleTaskPress = () => {
-    navigation.navigate("MyWeek");
   };
 
   const toggleFab = () => setFabOpen((prev) => !prev);
@@ -167,12 +206,12 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.focusCarousel}
               >
-                {focusList.length ? (
-                  focusList.map((focus) => (
+                {sortedFocus.length ? (
+                  sortedFocus.map((focus) => (
                     <TouchableOpacity
                       key={focus.id}
                       activeOpacity={0.7}
-                      style={styles.focusCard}
+                      style={[styles.focusCard, focus.completion_rate >= 1 && styles.focusCardComplete]}
                       onPress={() => navigation.navigate("ResolutionDashboardDetail", { resolutionId: focus.id })}
                     >
                       <Text style={styles.focusTitle} numberOfLines={1} ellipsizeMode="tail">
@@ -204,9 +243,9 @@ export default function HomeScreen() {
                 <Text style={styles.sectionTitle}>Today&apos;s Flow</Text>
               </View>
               <View>
-                {todayFlow.length ? (
-                  todayFlow.map((task) => (
-                    <View key={task.id} style={styles.taskCard}>
+                {sortedTasks.length ? (
+                  sortedTasks.map((task) => (
+                    <View key={task.id} style={[styles.taskCard, task.is_completed && styles.taskCardCompleted]}>
                       <TouchableOpacity
                         style={styles.taskBody}
                         onPress={() => navigation.navigate("TaskEdit", { taskId: task.id })}
@@ -280,6 +319,11 @@ export default function HomeScreen() {
             <Plus color="#fff" size={24} />
           </TouchableOpacity>
         </View>
+        {praise ? (
+          <Animated.View style={[styles.praiseToast, { opacity: praiseOpacity }]}>
+            <Text style={styles.praiseText}>{praise}</Text>
+          </Animated.View>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -491,6 +535,26 @@ const styles = StyleSheet.create({
   emptyFocusCard: {
     marginRight: 0,
   },
+  focusCardComplete: {
+    opacity: 0.6,
+  },
+  praiseToast: {
+    position: "absolute",
+    bottom: 120,
+    alignSelf: "center",
+    backgroundColor: "rgba(45, 55, 72, 0.95)",
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  praiseText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
   focusTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -530,6 +594,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 1,
+  },
+  taskCardCompleted: {
+    opacity: 0.6,
+    backgroundColor: "#F7FAFC",
   },
   taskBody: {
     flex: 1,
