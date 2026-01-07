@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-
 import { getInterventionHistoryItem, InterventionResponse } from "../api/interventions";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
@@ -40,41 +39,41 @@ export default function InterventionsHistoryDetailScreen({ route }: Props) {
   if (userLoading || loading || !snapshot || !meta) {
     return (
       <View style={styles.center}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#6B8DBF" />}
       </View>
     );
   }
 
+  const flagged = snapshot.slippage.flagged;
+  const completion = Math.round(snapshot.slippage.completion_rate * 100);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Week {meta.week_start} – {meta.week_end}</Text>
-      <Text style={styles.helper}>Created {new Date(meta.created_at).toLocaleString()}</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.section}>Slippage</Text>
-        <Text style={styles.body}>Flagged: {snapshot.slippage.flagged ? "Yes" : "No"}</Text>
-        <Text style={styles.body}>Reason: {snapshot.slippage.reason || "—"}</Text>
-        <Text style={styles.body}>Completion: {(snapshot.slippage.completion_rate * 100).toFixed(0)}%</Text>
-        <Text style={styles.body}>Missed scheduled: {snapshot.slippage.missed_scheduled}</Text>
-
-        {snapshot.card ? (
-          <View style={styles.mt16}>
-            <Text style={styles.section}>{snapshot.card.title}</Text>
-            <Text style={styles.body}>{snapshot.card.message}</Text>
-            {snapshot.card.options.map((option) => (
-              <View key={option.key} style={styles.optionRow}>
-                <Text style={styles.optionLabel}>{option.label}</Text>
-                <Text style={styles.optionDetails}>{option.details}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.optionLabel}>Looks on track</Text>
-            <Text style={styles.optionDetails}>No intervention needed.</Text>
-          </View>
-        )}
+      <View style={[styles.heroCard, flagged ? styles.heroAmber : styles.heroGreen]}>
+        <Text style={styles.subtitle}>Support Report • {new Date(meta.created_at).toLocaleDateString()}</Text>
+        <Text style={styles.title}>Completion Rate: {completion}%</Text>
+        <Text style={styles.helper}>
+          Week {meta.week_start} – {meta.week_end}
+        </Text>
       </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionLabel}>Agent Diagnosis</Text>
+        <Text style={styles.body}>{snapshot.slippage.reason || "No additional notes."}</Text>
+      </View>
+
+      {snapshot.card ? (
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionLabel}>{snapshot.card.title}</Text>
+          <Text style={styles.body}>{snapshot.card.message}</Text>
+          {snapshot.card.options.map((option) => (
+            <View key={option.key} style={styles.optionRow}>
+              <Text style={styles.optionLabel}>{option.label}</Text>
+              <Text style={styles.optionDetails}>{option.details}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -82,51 +81,70 @@ export default function InterventionsHistoryDetailScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    gap: 12,
+    gap: 16,
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    padding: 16,
+    backgroundColor: "#FAFAF8",
+  },
+  heroCard: {
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+  },
+  heroAmber: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FED7AA",
+  },
+  heroGreen: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  subtitle: {
+    color: "#6B7280",
+    textTransform: "uppercase",
+    fontSize: 12,
+    letterSpacing: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 28,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    marginTop: 8,
   },
   helper: {
-    color: "#666",
+    color: "#6B7280",
+    marginTop: 4,
   },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 16,
+  sectionCard: {
     backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
-  section: {
+  sectionLabel: {
     fontWeight: "600",
+    color: "#1F2933",
   },
   body: {
-    marginTop: 4,
-    color: "#444",
-  },
-  mt16: {
-    marginTop: 16,
+    marginTop: 6,
+    color: "#475569",
   },
   optionRow: {
-    marginTop: 8,
+    marginTop: 12,
   },
   optionLabel: {
     fontWeight: "600",
+    color: "#1F2933",
   },
   optionDetails: {
-    color: "#555",
-  },
-  emptyCard: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#f5f7fb",
+    color: "#6B7280",
+    marginTop: 4,
   },
   error: {
     color: "#c62828",

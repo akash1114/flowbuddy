@@ -23,4 +23,7 @@ export type RootStackParamList = {
   ResolutionDashboardDetail: {
     resolutionId: string;
   };
+  TaskEdit: {
+    taskId: string;
+  };
 };

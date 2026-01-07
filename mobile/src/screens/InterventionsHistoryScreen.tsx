@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { CheckCircle, ShieldAlert } from "lucide-react-native";
 
 import { listInterventionsHistory, InterventionHistoryItem } from "../api/interventions";
 import { useUserId } from "../state/user";
@@ -38,10 +48,10 @@ export default function InterventionsHistoryScreen() {
     }
   }, [fetchHistory, userId, userLoading]);
 
-  if (userLoading || (loading && !refreshing)) {
+  if ((userLoading || loading) && !refreshing) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Loading intervention history…</Text>
       </View>
     );
@@ -52,7 +62,7 @@ export default function InterventionsHistoryScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchHistory(); }} />}
     >
-      <Text style={styles.title}>Intervention History</Text>
+      <Text style={styles.title}>Intervention Log</Text>
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.error}>{error}</Text>
@@ -68,9 +78,14 @@ export default function InterventionsHistoryScreen() {
           style={styles.card}
           onPress={() => navigation.navigate("InterventionsHistoryDetail", { logId: item.id })}
         >
-          <Text style={styles.cardWeek}>{item.week_start} → {item.week_end}</Text>
-          <Text style={styles.cardTitle}>{item.flagged ? "Slippage detected" : "On track"}</Text>
-          <Text style={styles.cardMeta}>Created {new Date(item.created_at).toLocaleString()} · Reason {item.reason || "—"}</Text>
+          <View style={styles.iconColumn}>
+            {item.flagged ? <ShieldAlert size={28} color="#B45309" /> : <CheckCircle size={28} color="#15803D" />}
+          </View>
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle}>{item.flagged ? "Slippage Detected" : "On Track"}</Text>
+            <Text style={styles.cardMeta}>Week of {item.week_start}</Text>
+            <Text style={styles.cardMeta}>Reason: {item.reason || "—"}</Text>
+          </View>
         </TouchableOpacity>
       ))}
       {!items.length && !error ? <Text style={styles.helper}>No snapshots yet.</Text> : null}
@@ -82,39 +97,52 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 12,
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FAFAF8",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 28,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 12,
+    borderColor: "#F3F4F6",
+    padding: 16,
     backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
-  cardWeek: {
-    color: "#1a73e8",
-    fontWeight: "600",
+  iconColumn: {
+    width: 40,
+    alignItems: "center",
+  },
+  cardBody: {
+    flex: 1,
   },
   cardTitle: {
-    marginTop: 4,
-    fontSize: 16,
     fontWeight: "600",
+    color: "#1F2933",
   },
   cardMeta: {
     marginTop: 4,
-    color: "#666",
+    color: "#6B7280",
   },
   helper: {
     marginTop: 12,
     color: "#666",
+    textAlign: "center",
   },
   errorBox: {
     backgroundColor: "#fdecea",

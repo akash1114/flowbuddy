@@ -43,3 +43,12 @@ class TaskNoteUpdateResponse(BaseModel):
     id: UUID
     note: Optional[str]
     request_id: str
+
+
+class TaskEditRequest(BaseModel):
+    user_id: UUID
+    title: Optional[str]
+    completed: Optional[bool]
+    scheduled_day: Optional[date | None]
+    scheduled_time: Optional[time | None]
+    note: Optional[str | None]

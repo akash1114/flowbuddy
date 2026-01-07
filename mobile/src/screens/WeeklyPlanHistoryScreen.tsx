@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -52,7 +61,7 @@ export default function WeeklyPlanHistoryScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchHistory(); }} />}
     >
-      <Text style={styles.title}>Weekly History</Text>
+      <Text style={styles.title}>Plan Archive</Text>
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.error}>{error}</Text>
@@ -68,11 +77,18 @@ export default function WeeklyPlanHistoryScreen() {
           style={styles.card}
           onPress={() => navigation.navigate("WeeklyPlanHistoryDetail", { logId: item.id })}
         >
-          <Text style={styles.cardWeek}>{item.week_start} → {item.week_end}</Text>
-          <Text style={styles.cardTitle}>{item.title || "Weekly snapshot"}</Text>
-          <Text style={styles.cardMeta}>
-            Created {new Date(item.created_at).toLocaleString()} · Completion {item.completion_rate != null ? `${(item.completion_rate * 100).toFixed(0)}%` : "—"}
-          </Text>
+          <View style={styles.cardRow}>
+            <View style={styles.cardText}>
+              <Text style={styles.cardWeek}>Week of {item.week_start}</Text>
+              <Text style={styles.cardTitle}>{item.title || "Weekly snapshot"}</Text>
+              <Text style={styles.cardMeta}>Created {new Date(item.created_at).toLocaleDateString()}</Text>
+            </View>
+            <View style={[styles.badge, item.completion_rate && item.completion_rate >= 0.7 ? styles.badgeGreen : styles.badgeGray]}>
+              <Text style={styles.badgeText}>
+                {item.completion_rate != null ? `${(item.completion_rate * 100).toFixed(0)}%` : "—"}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       ))}
       {!items.length && !error ? <Text style={styles.helper}>No snapshots yet.</Text> : null}
@@ -84,6 +100,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 12,
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
@@ -91,28 +108,57 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 30,
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    color: "#2D3748",
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 12,
+    borderColor: "#F3F4F6",
+    padding: 16,
     backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardText: {
+    flex: 1,
   },
   cardWeek: {
-    color: "#1a73e8",
-    fontWeight: "600",
+    textTransform: "uppercase",
+    fontSize: 12,
+    color: "#94A3B8",
   },
   cardTitle: {
     marginTop: 4,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
+    color: "#1F2933",
   },
   cardMeta: {
     marginTop: 4,
-    color: "#666",
+    color: "#6B7280",
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  badgeText: {
+    fontWeight: "600",
+  },
+  badgeGreen: {
+    backgroundColor: "#DCFCE7",
+  },
+  badgeGray: {
+    backgroundColor: "#E5E7EB",
   },
   helper: {
     marginTop: 12,

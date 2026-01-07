@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Platform,
+} from "react-native";
+import { ShieldAlert, CheckCircle } from "lucide-react-native";
 import { getInterventionsLatest, runInterventions, InterventionResponse } from "../api/interventions";
 import { useUserId } from "../state/user";
 import { useNavigation } from "@react-navigation/native";
@@ -58,10 +68,10 @@ export default function InterventionsScreen() {
     }
   };
 
-  if (userLoading || (loading && !refreshing)) {
+  if ((userLoading || loading) && !refreshing) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Preparing your check-in…</Text>
       </View>
     );
@@ -88,54 +98,59 @@ export default function InterventionsScreen() {
       ) : null}
 
       {snapshot ? (
-        <View style={styles.card}>
-          <Text style={styles.week}>{snapshot.week.start} → {snapshot.week.end}</Text>
-          <Text style={styles.sectionLabel}>Slippage</Text>
-          <Text style={styles.body}>Flagged: {snapshot.slippage.flagged ? "Yes" : "No"}</Text>
-          <Text style={styles.body}>Reason: {snapshot.slippage.reason || "—"}</Text>
-          <Text style={styles.body}>Completion: {(snapshot.slippage.completion_rate * 100).toFixed(0)}%</Text>
-          <Text style={styles.body}>Missed scheduled: {snapshot.slippage.missed_scheduled}</Text>
-
-          {snapshot.card ? (
-            <View style={styles.cardSection}>
-              <Text style={[styles.sectionLabel, styles.mt16]}>{snapshot.card.title}</Text>
-              <Text style={styles.body}>{snapshot.card.message}</Text>
+        <>
+          <StatusCard snapshot={snapshot} />
+          {snapshot.slippage.flagged && snapshot.card ? (
+            <View style={styles.suggestionCard}>
+              <Text style={styles.suggestionTitle}>Agent Suggestion</Text>
+              <Text style={styles.suggestionMessage}>{snapshot.card.message}</Text>
               {snapshot.card.options.map((option) => (
-                <View key={option.key} style={styles.optionRow}>
+                <TouchableOpacity key={option.key} style={styles.optionButton}>
                   <Text style={styles.optionLabel}>{option.label}</Text>
                   <Text style={styles.optionDetails}>{option.details}</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Looks on track</Text>
-              <Text style={styles.helper}>No intervention needed right now.</Text>
-            </View>
-          )}
+          ) : null}
 
           <View style={styles.debugBox}>
             <Text style={styles.debugLabel}>Req ID: {requestId || snapshot.request_id || "—"}</Text>
           </View>
-        </View>
+        </>
       ) : null}
 
       {!snapshot ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No check-in yet</Text>
-          <Text style={styles.helper}>You can generate a gentle check-in based on your recent week.</Text>
-          <TouchableOpacity style={[styles.button, running && styles.buttonDisabled]} onPress={handleGenerate} disabled={running}>
-            {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Generate Interventions</Text>}
+          <Text style={styles.emptyTitle}>No check-in needed yet.</Text>
+          <Text style={styles.helper}>Check back Thursday!</Text>
+          <TouchableOpacity
+            style={[styles.button, running && styles.buttonDisabled]}
+            onPress={handleGenerate}
+            disabled={running}
+          >
+            {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Generate Check-in</Text>}
           </TouchableOpacity>
         </View>
       ) : null}
-
-      {snapshot ? (
-        <TouchableOpacity style={[styles.button, running && styles.buttonDisabled]} onPress={handleGenerate} disabled={running}>
-          {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Refresh Check-In</Text>}
-        </TouchableOpacity>
-      ) : null}
     </ScrollView>
+  );
+}
+
+function StatusCard({ snapshot }: { snapshot: InterventionResponse }) {
+  const flagged = snapshot.slippage.flagged;
+  const completion = Math.round(snapshot.slippage.completion_rate * 100);
+  const theme = flagged
+    ? { card: styles.warningCard, icon: <ShieldAlert size={42} color="#B45309" />, title: "Slippage detected" }
+    : { card: styles.safeCard, icon: <CheckCircle size={42} color="#15803D" />, title: "On track" };
+  return (
+    <View style={[styles.statusCard, theme.card]}>
+      {theme.icon}
+      <View style={styles.statusContent}>
+        <Text style={styles.statusTitle}>{theme.title}</Text>
+        <Text style={styles.statusMeta}>Completion Rate: {completion}%</Text>
+        <Text style={styles.statusMeta}>Missed scheduled: {snapshot.slippage.missed_scheduled}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -143,17 +158,19 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     gap: 16,
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+    backgroundColor: "#FAFAF8",
   },
   title: {
     fontSize: 28,
-    fontWeight: "600",
-    color: "#111",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    color: "#2D3748",
   },
   headerRow: {
     flexDirection: "row",
@@ -165,54 +182,79 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   linkText: {
-    color: "#1a73e8",
+    color: "#6B8DBF",
     fontWeight: "600",
   },
-  card: {
-    borderRadius: 16,
+  statusCard: {
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  warningCard: {
+    backgroundColor: "#FFF7ED",
     borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 16,
-    backgroundColor: "#fff",
+    borderColor: "#FED7AA",
   },
-  week: {
+  safeCard: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 20,
     fontWeight: "600",
-    color: "#1a73e8",
-    marginBottom: 8,
+    color: "#1F2933",
   },
-  sectionLabel: {
-    fontWeight: "600",
-    marginTop: 8,
-  },
-  body: {
-    color: "#444",
+  statusMeta: {
+    color: "#475467",
     marginTop: 4,
   },
-  cardSection: {
+  suggestionCard: {
     marginTop: 12,
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
-  mt16: {
-    marginTop: 16,
+  suggestionTitle: {
+    fontWeight: "600",
+    color: "#1F2933",
   },
-  optionRow: {
-    marginTop: 8,
+  suggestionMessage: {
+    marginTop: 6,
+    color: "#4B5563",
+  },
+  optionButton: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   optionLabel: {
     fontWeight: "600",
-    color: "#222",
+    color: "#1F2933",
   },
   optionDetails: {
-    color: "#555",
+    color: "#6B7280",
+    marginTop: 4,
   },
   button: {
-    marginTop: 12,
-    backgroundColor: "#1a73e8",
+    marginTop: 16,
+    backgroundColor: "#6B8DBF",
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 999,
     alignItems: "center",
+    paddingHorizontal: 24,
   },
   buttonDisabled: {
-    backgroundColor: "#8fb5f8",
+    backgroundColor: "#A5B8D9",
   },
   buttonText: {
     color: "#fff",
@@ -224,16 +266,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   emptyCard: {
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#dfe3ec",
-    padding: 16,
+    borderColor: "#E2E8F0",
+    padding: 24,
     alignItems: "center",
     backgroundColor: "#fff",
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
+    marginTop: 12,
+    color: "#1F2933",
   },
   error: {
     color: "#c62828",
@@ -265,5 +309,6 @@ const styles = StyleSheet.create({
   debugLabel: {
     fontSize: 12,
     color: "#555",
+    textAlign: "center",
   },
 });

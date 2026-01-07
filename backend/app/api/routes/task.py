@@ -15,6 +15,7 @@ from app.api.schemas.task import (
     TaskUpdateResponse,
     TaskNoteUpdateRequest,
     TaskNoteUpdateResponse,
+    TaskEditRequest,
 )
 from app.db.deps import get_db
 from app.db.models.agent_action_log import AgentActionLog
@@ -90,6 +91,20 @@ def list_tasks(
     )
 
     return [_serialize_task(task) for task in start_tasks]
+
+
+@router.get("/tasks/{task_id}", response_model=TaskSummary, tags=["tasks"])
+def get_task_detail(
+    task_id: UUID,
+    user_id: UUID = Query(..., description="User ID owning the task"),
+    db: Session = Depends(get_db),
+) -> TaskSummary:
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Task does not belong to user")
+    return _serialize_task(task)
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskUpdateResponse, tags=["tasks"])
@@ -304,3 +319,47 @@ def update_task_note(
         note=new_note,
         request_id=request_id or "",
     )
+
+
+@router.patch("/tasks/{task_id}/edit", response_model=TaskSummary, tags=["tasks"])
+def edit_task(
+    task_id: UUID,
+    payload: TaskEditRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+) -> TaskSummary:
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.user_id != payload.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Task does not belong to user")
+
+    request_id = getattr(http_request.state, "request_id", None)
+    try:
+        with trace(
+            "task.edit",
+            metadata={"task_id": str(task_id), "user_id": str(payload.user_id), "request_id": request_id},
+            user_id=str(payload.user_id),
+            request_id=request_id,
+        ):
+            if payload.title is not None:
+                task.title = payload.title
+            if payload.completed is not None:
+                task.completed = payload.completed
+                task.completed_at = datetime.now(timezone.utc) if payload.completed else None
+            if "scheduled_day" in payload.__fields_set__:
+                task.scheduled_day = payload.scheduled_day
+            if "scheduled_time" in payload.__fields_set__:
+                task.scheduled_time = payload.scheduled_time
+            if "note" in payload.__fields_set__:
+                task.note = payload.note
+            db.add(task)
+            db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    return _serialize_task(task)

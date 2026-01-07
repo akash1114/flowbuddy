@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { getWeeklyPlanHistoryItem, WeeklyPlanResponse } from "../api/weeklyPlan";
@@ -40,32 +40,36 @@ export default function WeeklyPlanHistoryDetailScreen({ route }: Props) {
   if (userLoading || loading || !snapshot || !meta) {
     return (
       <View style={styles.center}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#6B8DBF" />}
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Week {meta.week_start} – {meta.week_end}</Text>
-      <Text style={styles.helper}>Generated {new Date(meta.created_at).toLocaleString()}</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.section}>Focus</Text>
-        <Text style={styles.planTitle}>{snapshot.micro_resolution.title}</Text>
-        <Text style={styles.body}>{snapshot.micro_resolution.why_this}</Text>
-
-        <Text style={[styles.section, styles.mt16]}>Suggested Tasks</Text>
-        {snapshot.micro_resolution.suggested_week_1_tasks.map((task) => (
-          <View key={task.title} style={styles.taskRow}>
-            <Text style={styles.taskTitle}>{task.title}</Text>
-            <Text style={styles.taskMeta}>
-              {task.duration_min ? `${task.duration_min} min` : "Flexible"}
-              {task.suggested_time ? ` · ${task.suggested_time}` : ""}
-            </Text>
-          </View>
-        ))}
+      <View style={styles.heroCard}>
+        <Text style={styles.subtitle}>Archived Snapshot • {new Date(meta.created_at).toLocaleDateString()}</Text>
+        <Text style={styles.title}>{snapshot.micro_resolution.title}</Text>
+        <Text style={styles.helper}>{snapshot.week.start} – {snapshot.week.end}</Text>
       </View>
+
+      <View style={styles.focusCard}>
+        <Text style={styles.sectionLabel}>Focus</Text>
+        <Text style={styles.body}>{snapshot.micro_resolution.why_this}</Text>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Suggested Actions</Text>
+      </View>
+      {snapshot.micro_resolution.suggested_week_1_tasks.map((task) => (
+        <View key={task.title} style={styles.taskRow}>
+          <Text style={styles.taskTitle}>{task.title}</Text>
+          <Text style={styles.taskMeta}>
+            {task.duration_min ? `${task.duration_min} min` : "Flexible"}
+            {task.suggested_time ? ` · ${task.suggested_time}` : ""}
+          </Text>
+        </View>
+      ))}
     </ScrollView>
   );
 }
@@ -73,51 +77,77 @@ export default function WeeklyPlanHistoryDetailScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    gap: 12,
+    gap: 16,
+    backgroundColor: "#FAFAF8",
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FAFAF8",
+  },
+  heroCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    gap: 8,
+  },
+  subtitle: {
+    color: "#6B7280",
+    textTransform: "uppercase",
+    fontSize: 12,
+    letterSpacing: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 28,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
   },
   helper: {
-    color: "#666",
+    color: "#6B7280",
+    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
   },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e2e7f0",
-    padding: 16,
+  focusCard: {
     backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
-  section: {
+  sectionLabel: {
     fontWeight: "600",
-    color: "#333",
-  },
-  planTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 4,
+    color: "#1F2933",
   },
   body: {
-    marginTop: 4,
-    color: "#444",
+    marginTop: 6,
+    color: "#475569",
+    fontStyle: "italic",
   },
-  mt16: {
+  sectionHeader: {
     marginTop: 16,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2933",
+  },
   taskRow: {
-    marginTop: 8,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    marginBottom: 8,
   },
   taskTitle: {
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#1F2933",
   },
   taskMeta: {
-    color: "#666",
+    color: "#6B7280",
+    marginTop: 4,
   },
   error: {
     color: "#c62828",

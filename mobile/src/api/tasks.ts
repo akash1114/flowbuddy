@@ -65,6 +65,30 @@ export async function updateTaskCompletion(
   };
 }
 
+export async function getTask(taskId: string, userId: string): Promise<TaskItem> {
+  const params = new URLSearchParams({ user_id: userId });
+  const { data } = await apiRequest<TaskItem>(`/tasks/${taskId}?${params.toString()}`);
+  return data;
+}
+
+export async function updateTask(
+  taskId: string,
+  userId: string,
+  payload: {
+    title?: string;
+    completed?: boolean;
+    scheduled_day?: string | null;
+    scheduled_time?: string | null;
+    note?: string | null;
+  },
+): Promise<TaskItem> {
+  const { data } = await apiRequest<TaskItem>(`/tasks/${taskId}/edit`, {
+    method: "PATCH",
+    body: { user_id: userId, ...payload },
+  });
+  return data;
+}
+
 export async function updateTaskNote(
   taskId: string,
   userId: string,

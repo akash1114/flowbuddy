@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Settings, Plus, Brain, Target, Check, Calendar } from "lucide-react-native";
+import { Settings, Plus, Brain, Target, Check, Calendar, Shield } from "lucide-react-native";
 import * as dashboardApi from "../api/dashboard";
 import type { DashboardResponse } from "../api/dashboard";
 import * as tasksApi from "../api/tasks";
@@ -130,6 +130,16 @@ export default function HomeScreen() {
             <View>
               <Text style={styles.greeting}>{greeting}, Alex</Text>
               <Text style={styles.date}>{subtitleDate}</Text>
+              <View style={styles.coachingRow}>
+                <TouchableOpacity style={styles.coachingButton} onPress={() => navigation.navigate("WeeklyPlan")}>
+                  <Calendar size={20} color="#4A5568" />
+                  <Text style={styles.coachingText}>Weekly Plan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.coachingButton} onPress={() => navigation.navigate("Interventions")}>
+                  <Shield size={20} color="#4A5568" />
+                  <Text style={styles.coachingText}>Interventions</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <TouchableOpacity style={styles.settingsButton} onPress={() => navigation.navigate("SettingsPermissions")}>
               <Settings color="#2D3748" size={24} />
@@ -197,7 +207,11 @@ export default function HomeScreen() {
                 {todayFlow.length ? (
                   todayFlow.map((task) => (
                     <View key={task.id} style={styles.taskCard}>
-                      <TouchableOpacity style={styles.taskBody} onPress={handleTaskPress} activeOpacity={0.8}>
+                      <TouchableOpacity
+                        style={styles.taskBody}
+                        onPress={() => navigation.navigate("TaskEdit", { taskId: task.id })}
+                        activeOpacity={0.8}
+                      >
                         <View style={styles.taskTimeBox}>
                           {task.scheduled_time ? (
                             <Text style={styles.taskTime}>{formatTime(task.scheduled_time)}</Text>
@@ -399,6 +413,32 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 16,
     marginTop: 4,
+  },
+  coachingRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  coachingButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#EDF2F7",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  coachingText: {
+    fontWeight: "600",
+    color: "#425466",
   },
   settingsButton: {
     padding: 8,
