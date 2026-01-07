@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +15,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { listAgentLog, AgentLogListItem } from "../api/agentLog";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { Brain, Target, ShieldAlert, FileText } from "lucide-react-native";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "AgentLog">;
 
@@ -67,7 +69,7 @@ export default function AgentLogScreen() {
   if (userLoading || (loading && !entries.length)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color="#6B8DBF" />
         <Text style={styles.helper}>Loading agent log…</Text>
       </View>
     );
@@ -78,18 +80,11 @@ export default function AgentLogScreen() {
       data={entries}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.listContent}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => fetchLogs({ reset: true })}
-        />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchLogs({ reset: true })} />}
       ListHeaderComponent={
         <View style={styles.header}>
-          <Text style={styles.title}>Agent Log</Text>
-          <Text style={styles.subtitle}>
-            A chronological record of FlowBuddy actions such as plan approvals, check-ins, and task updates.
-          </Text>
+          <Text style={styles.title}>System Log</Text>
+          <Text style={styles.subtitle}>A transparent record of all interactions and automated decisions.</Text>
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.error}>{error}</Text>
@@ -112,20 +107,65 @@ export default function AgentLogScreen() {
       }
       renderItem={({ item }) => (
         <TouchableOpacity
-          style={styles.card}
+          style={styles.timelineRow}
           onPress={() => navigation.navigate("AgentLogDetail", { logId: item.id })}
         >
-          <Text style={styles.summary}>{item.summary}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.actionType}>{item.action_type}</Text>
-            <Text style={styles.timestamp}>{new Date(item.created_at).toLocaleString()}</Text>
+          <View style={styles.iconColumn}>{renderIcon(item.action_type)}</View>
+          <View style={[styles.card, isBrainDump(item.action_type) && styles.brainCard]}>
+            <Text style={styles.summary}>{item.summary}</Text>
+            <View style={styles.metaRow}>
+              <Text style={[styles.badge, getBadgeStyle(item.action_type)]}>{item.action_type}</Text>
+              <Text style={styles.timestamp}>{new Date(item.created_at).toLocaleString()}</Text>
+            </View>
+            {item.request_id ? <Text style={styles.requestId}>request_id: {item.request_id}</Text> : null}
+            {item.undo_available ? <Text style={styles.undo}>Undo available</Text> : null}
           </View>
-          {item.request_id ? <Text style={styles.requestId}>request_id: {item.request_id}</Text> : null}
-          {item.undo_available ? <Text style={styles.undo}>Undo available</Text> : null}
         </TouchableOpacity>
       )}
     />
   );
+}
+
+function isBrainDump(actionType: string) {
+  return actionType.toLowerCase().includes("brain_dump");
+}
+
+function renderIcon(actionType: string) {
+  const lower = actionType.toLowerCase();
+  if (lower.includes("brain_dump")) {
+    return (
+      <View style={[styles.iconCircle, styles.iconPurple]}>
+        <Brain size={18} color="#7C3AED" />
+      </View>
+    );
+  }
+  if (lower.includes("resolution")) {
+    return (
+      <View style={[styles.iconCircle, styles.iconBlue]}>
+        <Target size={18} color="#2563EB" />
+      </View>
+    );
+  }
+  if (lower.includes("intervention")) {
+    return (
+      <View style={[styles.iconCircle, styles.iconAmber]}>
+        <ShieldAlert size={18} color="#B45309" />
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.iconCircle, styles.iconGray]}>
+      <FileText size={18} color="#475569" />
+    </View>
+  );
+}
+
+function getBadgeStyle(actionType: string) {
+  const lower = actionType.toLowerCase();
+  if (lower.includes("brain_dump")) return styles.badgePurple;
+  if (lower.includes("resolution")) return styles.badgeBlue;
+  if (lower.includes("intervention")) return styles.badgeAmber;
+  return styles.badgeGray;
 }
 
 const styles = StyleSheet.create({
@@ -133,6 +173,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FAFAF8",
   },
   helper: {
     marginTop: 12,
@@ -142,14 +183,16 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     gap: 12,
+    backgroundColor: "#FAFAF8",
   },
   header: {
     marginBottom: 12,
     gap: 8,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 30,
+    color: "#2D3748",
+    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
   },
   subtitle: {
     color: "#555",
@@ -175,6 +218,33 @@ const styles = StyleSheet.create({
     color: "#c62828",
     fontWeight: "600",
   },
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  iconColumn: {
+    width: 40,
+    alignItems: "center",
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconPurple: {
+    backgroundColor: "#F3EEFF",
+  },
+  iconBlue: {
+    backgroundColor: "#E0ECFF",
+  },
+  iconAmber: {
+    backgroundColor: "#FEF3C7",
+  },
+  iconGray: {
+    backgroundColor: "#E2E8F0",
+  },
   card: {
     borderRadius: 12,
     borderWidth: 1,
@@ -182,6 +252,16 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: "#fff",
     gap: 6,
+    flex: 1,
+    marginLeft: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  brainCard: {
+    backgroundColor: "#F8F7FC",
+    borderColor: "#E9E5FF",
   },
   summary: {
     fontSize: 16,
@@ -193,12 +273,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  actionType: {
-    fontSize: 12,
+  badge: {
+    fontSize: 10,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    color: "#1a73e8",
+    letterSpacing: 0.8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
     fontWeight: "600",
+  },
+  badgePurple: {
+    backgroundColor: "#EEE5FF",
+    color: "#6D28D9",
+  },
+  badgeBlue: {
+    backgroundColor: "#DBEAFE",
+    color: "#1D4ED8",
+  },
+  badgeAmber: {
+    backgroundColor: "#FEF3C7",
+    color: "#B45309",
+  },
+  badgeGray: {
+    backgroundColor: "#E5E7EB",
+    color: "#4B5563",
   },
   timestamp: {
     fontSize: 12,
@@ -220,10 +318,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#1a73e8",
+    borderColor: "#6B8DBF",
   },
   loadMoreText: {
-    color: "#1a73e8",
+    color: "#6B8DBF",
     fontWeight: "600",
   },
   footerGap: {
