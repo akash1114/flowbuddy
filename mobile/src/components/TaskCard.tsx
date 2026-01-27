@@ -1,8 +1,9 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Calendar as CalendarIcon, Check } from "lucide-react-native";
+import { Calendar as CalendarIcon, Check, Bell, Trash2 } from "lucide-react-native";
 import { formatScheduleLabel } from "../utils/datetime";
 import { hasCalendarPermissions, isTaskSynced, requestCalendarPermissions, syncTaskToCalendar } from "../hooks/useCalendarSync";
 import { ReactNode, useCallback, useEffect, useState } from "react";
+import { useNotifications } from "../hooks/useNotifications";
 
 export type TaskCardTask = {
   id: string;
@@ -20,11 +21,24 @@ type Props = {
   badgeLabel?: string | null;
   footer?: ReactNode;
   disabled?: boolean;
+  onDelete?: (taskId: string) => void;
+  deleteDisabled?: boolean;
 };
 
-export function TaskCard({ task, onToggle, onPress, badgeLabel, footer, disabled }: Props) {
+export function TaskCard({
+  task,
+  onToggle,
+  onPress,
+  badgeLabel,
+  footer,
+  disabled,
+  onDelete,
+  deleteDisabled,
+}: Props) {
   const [syncing, setSyncing] = useState(false);
   const [alreadySynced, setAlreadySynced] = useState(false);
+  const [reminderScheduled, setReminderScheduled] = useState(false);
+  const { registerForPushNotificationsAsync, scheduleTaskReminder } = useNotifications();
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +74,10 @@ export function TaskCard({ task, onToggle, onPress, badgeLabel, footer, disabled
     };
   }, [task.id, task.scheduled_day, task.scheduled_time, task.duration_min, task.title]);
 
+  useEffect(() => {
+    setReminderScheduled(false);
+  }, [task.id, task.scheduled_day, task.scheduled_time]);
+
   const handleToggle = useCallback(() => {
     if (disabled || !onToggle) return;
     onToggle(task.id, !task.completed);
@@ -94,6 +112,34 @@ export function TaskCard({ task, onToggle, onPress, badgeLabel, footer, disabled
     }
   }, [task, syncing]);
 
+  const handleReminder = useCallback(async () => {
+    if (!task.scheduled_day || !task.scheduled_time) {
+      Alert.alert("Schedule missing", "Add a scheduled day and time before setting a reminder.");
+      return;
+    }
+    try {
+      const granted = await registerForPushNotificationsAsync();
+      if (!granted) {
+        Alert.alert("Permission needed", "Enable push notifications in Settings to get reminders.");
+        return;
+      }
+      const notificationId = await scheduleTaskReminder({
+        title: task.title,
+        scheduled_day: task.scheduled_day,
+        scheduled_time: task.scheduled_time,
+      });
+      if (!notificationId) {
+        Alert.alert("Too late", "This task's time has already passed.");
+        return;
+      }
+      setReminderScheduled(true);
+      Alert.alert("Reminder set", "We'll notify you right on time.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to schedule reminder.";
+      Alert.alert("Reminders", message);
+    }
+  }, [task, registerForPushNotificationsAsync, scheduleTaskReminder]);
+
   const scheduleLabel = formatScheduleLabel(task.scheduled_day, task.scheduled_time);
 
   return (
@@ -115,10 +161,28 @@ export function TaskCard({ task, onToggle, onPress, badgeLabel, footer, disabled
             </View>
           ) : null}
         </TouchableOpacity>
-        {!task.completed && !alreadySynced ? (
-          <TouchableOpacity style={styles.syncButton} onPress={handleSync} disabled={syncing}>
-            <CalendarIcon size={20} color="#2563EB" />
-          </TouchableOpacity>
+        {(!task.completed || onDelete) ? (
+          <View style={styles.actions}>
+            {!task.completed && !alreadySynced ? (
+              <TouchableOpacity style={styles.syncButton} onPress={handleSync} disabled={syncing}>
+                <CalendarIcon size={20} color="#2563EB" />
+              </TouchableOpacity>
+            ) : null}
+            {!task.completed && !reminderScheduled ? (
+              <TouchableOpacity style={styles.reminderButton} onPress={handleReminder}>
+                <Bell size={18} color="#FB923C" />
+              </TouchableOpacity>
+            ) : null}
+            {onDelete ? (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => onDelete(task.id)}
+                disabled={deleteDisabled}
+              >
+                <Trash2 size={18} color="#DC2626" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         ) : null}
       </View>
       {footer ? <View style={styles.footer}>{footer}</View> : null}
@@ -197,6 +261,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EFF6FF",
     marginLeft: 12,
+  },
+  reminderButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF7ED",
+    marginLeft: 8,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FEF2F2",
+    marginLeft: 8,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   footer: {
     marginTop: 10,

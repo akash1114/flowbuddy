@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Calendar, Shield, Power, PauseCircle, FileText } from "lucide-react-native";
+import { Calendar, Shield, Power, PauseCircle, FileText, Bell } from "lucide-react-native";
 import { getPreferences, updatePreferences, PreferencesResponse } from "../api/preferences";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useNotifications } from "../hooks/useNotifications";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SettingsPermissions">;
 
 export default function SettingsPermissionsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userId, loading: userLoading } = useUserId();
+  const { registerForPushNotificationsAsync } = useNotifications();
   const [prefs, setPrefs] = useState<PreferencesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [notificationStatus, setNotificationStatus] = useState<"unknown" | "granted" | "denied">("unknown");
 
   const fetchPrefs = useCallback(async () => {
     if (!userId) return;
@@ -65,6 +68,21 @@ export default function SettingsPermissionsScreen() {
       </View>
     );
   }
+
+  const handleNotificationEnable = async () => {
+    try {
+      const granted = await registerForPushNotificationsAsync();
+      setNotificationStatus(granted ? "granted" : "denied");
+      Alert.alert(
+        granted ? "Notifications enabled" : "Permission denied",
+        granted
+          ? "Great! We'll nudge you when tasks are due."
+          : "We can't send reminders without permission. You can try again anytime.",
+      );
+    } catch (err) {
+      Alert.alert("Notifications", err instanceof Error ? err.message : "Unable to update permission.");
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -135,6 +153,22 @@ export default function SettingsPermissionsScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>System</Text>
+            <TouchableOpacity style={styles.systemRow} onPress={handleNotificationEnable}>
+              <View style={styles.systemIcon}>
+                <Bell size={18} color="#1F2933" />
+              </View>
+              <View style={styles.notificationText}>
+                <Text style={styles.systemText}>Push reminders</Text>
+                <Text style={styles.notificationHelper}>
+                  {notificationStatus === "granted"
+                    ? "Enabled"
+                    : notificationStatus === "denied"
+                      ? "Permission denied"
+                      : "Tap to enable task reminders"}
+                </Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.systemRow} onPress={() => navigation.navigate("AgentLog")}>
               <View style={styles.systemIcon}>
                 <FileText size={18} color="#1F2933" />
@@ -355,6 +389,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: "600",
     color: "#1F2933",
+  },
+  notificationText: {
+    flex: 1,
+  },
+  notificationHelper: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
   },
   chevron: {
     fontSize: 20,

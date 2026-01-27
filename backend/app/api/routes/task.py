@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import asc, nulls_last
 from sqlalchemy.orm import Session
 
@@ -207,6 +207,62 @@ def get_task_detail(
     if task.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Task does not belong to user")
     return _serialize_task(task)
+
+
+@router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["tasks"])
+def delete_task(
+    task_id: UUID,
+    http_request: Request,
+    user_id: UUID = Query(..., description="User ID owning the task"),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Delete a task owned by the user."""
+    task = db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if task.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Task does not belong to user")
+
+    request_id = getattr(http_request.state, "request_id", None)
+    metadata = {
+        "route": f"/tasks/{task_id}",
+        "task_id": str(task_id),
+        "user_id": str(user_id),
+        "request_id": request_id,
+    }
+    start_time = datetime.now(timezone.utc)
+    try:
+        with trace(
+            "task.delete",
+            metadata=metadata,
+            user_id=str(user_id),
+            request_id=request_id,
+        ):
+            log_entry = AgentActionLog(
+                user_id=user_id,
+                action_type="task_deleted",
+                action_payload={
+                    "task_id": str(task_id),
+                    "resolution_id": str(task.resolution_id) if task.resolution_id else None,
+                    "request_id": request_id,
+                },
+                reason="Task deleted by user",
+                undo_available=False,
+            )
+            db.add(log_entry)
+            db.delete(task)
+            db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+    log_metric("task.delete.success", 1, metadata={"user_id": str(user_id), "task_id": str(task_id)})
+    log_metric("task.delete.latency_ms", latency_ms, metadata={"task_id": str(task_id)})
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskUpdateResponse, tags=["tasks"])

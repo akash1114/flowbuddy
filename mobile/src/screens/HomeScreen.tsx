@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Vibration } from "react-native";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Vibration } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -52,6 +52,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [praise, setPraise] = useState<string | null>(null);
   const [taskTab, setTaskTab] = useState<"remaining" | "completed">("remaining");
@@ -174,6 +175,38 @@ export default function HomeScreen() {
       setUpdatingTaskId(null);
     }
   };
+
+  const handleDeleteTask = useCallback(
+    async (taskId: string) => {
+      if (!userId) return;
+      setDeletingTaskId(taskId);
+      try {
+        await tasksApi.deleteTask(taskId, userId);
+        setTodayFlow((prev) => prev.filter((task) => task.id !== taskId));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to delete that task right now.");
+      } finally {
+        setDeletingTaskId(null);
+      }
+    },
+    [userId],
+  );
+
+  const confirmDeleteTask = useCallback(
+    (taskId: string) => {
+      if (deletingTaskId) return;
+      const target = todayFlow.find((task) => task.id === taskId);
+      Alert.alert("Delete task?", `Delete "${target?.title ?? "this task"}" from your flow?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => handleDeleteTask(taskId),
+        },
+      ]);
+    },
+    [todayFlow, deletingTaskId, handleDeleteTask],
+  );
 
   const toggleFab = () => setFabOpen((prev) => !prev);
 
@@ -308,6 +341,8 @@ export default function HomeScreen() {
                       onToggle={
                         updatingTaskId ? undefined : (id, completed) => handleToggleTask(id, completed)
                       }
+                      onDelete={confirmDeleteTask}
+                      deleteDisabled={deletingTaskId === task.id}
                       badgeLabel={task.source_resolution_title}
                     />
                   ))

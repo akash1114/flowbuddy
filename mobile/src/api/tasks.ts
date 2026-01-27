@@ -73,6 +73,13 @@ export async function getTask(taskId: string, userId: string): Promise<TaskItem>
   return data;
 }
 
+export async function deleteTask(taskId: string, userId: string): Promise<void> {
+  const params = new URLSearchParams({ user_id: userId });
+  await apiRequest<null>(`/tasks/${taskId}?${params.toString()}`, {
+    method: "DELETE",
+  });
+}
+
 export async function updateTask(
   taskId: string,
   userId: string,

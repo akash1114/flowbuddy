@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   SectionList,
   StyleSheet,
@@ -12,7 +13,7 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../../types/navigation";
-import { TaskItem, updateTaskCompletion, updateTaskNote } from "../api/tasks";
+import { TaskItem, updateTaskCompletion, updateTaskNote, deleteTask } from "../api/tasks";
 import { TaskCard } from "../components/TaskCard";
 import { useUserId } from "../state/user";
 import { useTasks } from "../hooks/useTasks";
@@ -44,6 +45,7 @@ export default function MyWeekScreen() {
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const dayFormatter = useMemo(
     () =>
@@ -99,6 +101,8 @@ export default function MyWeekScreen() {
       }}
       onToggle={updatingId ? undefined : () => handleToggle(item)}
       badgeLabel={null}
+      onDelete={handleDeletePrompt}
+      deleteDisabled={deletingId === item.id}
       footer={
         <View>
           {item.note ? <Text style={styles.noteText}>{item.note}</Text> : null}
@@ -188,6 +192,33 @@ export default function MyWeekScreen() {
       setNoteError(err instanceof Error ? err.message : "Unable to clear that note right now.");
     } finally {
       setNoteSaving(false);
+    }
+  };
+
+  const handleDeletePrompt = (taskId: string) => {
+    if (deletingId) return;
+    const target = tasks.find((task) => task.id === taskId);
+    Alert.alert("Delete task?", `Remove "${target?.title ?? "this task"}" from your week?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => performDeleteTask(taskId),
+      },
+    ]);
+  };
+
+  const performDeleteTask = async (taskId: string) => {
+    if (!userId) return;
+    setDeletingId(taskId);
+    setActionError(null);
+    try {
+      await deleteTask(taskId, userId);
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Unable to delete that task right now.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
