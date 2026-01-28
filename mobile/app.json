@@ -2,6 +2,11 @@
   "expo": {
     "name": "Sarthi AI",
     "slug": "sarthiai",
+    "extra": {
+      "eas": {
+        "projectId": "a005f37e-2bd2-4483-af1c-7579dbb9da85"
+      }
+    },
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

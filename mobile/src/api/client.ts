@@ -5,10 +5,10 @@ import { Platform } from "react-native";
 // For physical devices, use your machine's LAN IP address
 const getApiBaseUrl = (): string => {
   if (Platform.OS === "android") {
-    return "http://10.0.2.2:8000";
+    return "https://sarthiai-backend.ctxbt.com";
   }
   // iOS simulator and web
-  return "http://127.0.0.1:8000";
+  return "https://sarthiai-backend.ctxbt.com";
 };
 
 const API_BASE_URL = getApiBaseUrl();
