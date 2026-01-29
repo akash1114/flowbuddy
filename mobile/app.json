@@ -24,7 +24,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.akash114.sarthiai"
     },
     "android": {
       "package": "com.akash114.sarthiai"

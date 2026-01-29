@@ -80,10 +80,7 @@ export function useNotifications() {
         title: "Sarathi AI",
         body: `Time for: ${task.title}`,
       },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        date: triggerDate,
-      },
+      trigger: triggerDate,
     });
     return id;
   }, []);

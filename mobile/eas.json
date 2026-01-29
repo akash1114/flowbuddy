@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 16.6.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "distribution": "store"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

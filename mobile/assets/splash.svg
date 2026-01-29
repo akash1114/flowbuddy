@@ -1,0 +1,37 @@
+<svg width="1242" height="2436" viewBox="0 0 1242 2436" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4338ca;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e1b4b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1242" height="2436" fill="url(#bgGrad)"/>
+
+  <g transform="translate(621, 1000)">
+    <g transform="scale(0.8)">
+       <circle r="200" stroke="#22d3ee" stroke-width="30" fill="none" opacity="0.9"/>
+       <circle r="50" fill="#f8fafc"/>
+       <line x1="0" y1="-50" x2="0" y2="-200" stroke="#f8fafc" stroke-width="40" stroke-linecap="round"/>
+       <line x1="0" y1="50" x2="0" y2="200" stroke="#f8fafc" stroke-width="40" stroke-linecap="round"/>
+       <line x1="-50" y1="0" x2="-200" y2="0" stroke="#f8fafc" stroke-width="40" stroke-linecap="round"/>
+       <line x1="50" y1="0" x2="200" y2="0" stroke="#f8fafc" stroke-width="40" stroke-linecap="round"/>
+       <line x1="-35" y1="-35" x2="-140" y2="-140" stroke="#f8fafc" stroke-width="20" opacity="0.5" stroke-linecap="round"/>
+       <line x1="35" y1="-35" x2="140" y2="-140" stroke="#f8fafc" stroke-width="20" opacity="0.5" stroke-linecap="round"/>
+       <line x1="-35" y1="35" x2="-140" y2="140" stroke="#f8fafc" stroke-width="20" opacity="0.5" stroke-linecap="round"/>
+       <line x1="35" y1="35" x2="140" y2="140" stroke="#f8fafc" stroke-width="20" opacity="0.5" stroke-linecap="round"/>
+    </g>
+
+    <text x="0" y="350" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="90" fill="#f8fafc" text-anchor="middle" letter-spacing="4">
+      SARATHI AI
+    </text>
+    
+    <text x="0" y="440" font-family="Arial, Helvetica, sans-serif" font-size="40" fill="#22d3ee" text-anchor="middle" letter-spacing="2" opacity="0.8">
+      SUPPORTIVE AUTONOMY
+    </text>
+  </g>
+  
+  <text x="621" y="2300" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#6366f1" text-anchor="middle" letter-spacing="2">
+      POWERED BY AGENTIC AI
+    </text>
+</svg>

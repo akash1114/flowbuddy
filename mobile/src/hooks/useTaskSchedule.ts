@@ -112,10 +112,11 @@ async function loadCalendarConflicts(rangeStart: Date, rangeEnd: Date): Promise<
     }
 
     const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-    if (!calendars.length) {
+    const targetCalendars = calendars.filter((cal) => cal.title === "Sarathi AI" || cal.allowsModifications);
+    if (!targetCalendars.length) {
       return {};
     }
-    const calendarIds = calendars.map((cal) => cal.id);
+    const calendarIds = targetCalendars.map((cal) => cal.id);
     const events = await Calendar.getEventsAsync(calendarIds, rangeStart, rangeEnd);
     const mapping: Record<string, Set<string>> = {};
 
@@ -137,4 +138,3 @@ async function loadCalendarConflicts(rangeStart: Date, rangeEnd: Date): Promise<
     return {};
   }
 }
-
