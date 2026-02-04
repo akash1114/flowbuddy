@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import { createResolution } from "../api/resolutions";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
 import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, "ResolutionCreate">;
 
@@ -28,6 +29,7 @@ export default function ResolutionCreateScreen() {
   const navigation = useNavigation<NavProp>();
   const { userId, loading: userLoading } = useUserId();
   const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [text, setText] = useState("");
   const [duration, setDuration] = useState("");
   const [customVisible, setCustomVisible] = useState(false);
@@ -87,9 +89,9 @@ export default function ResolutionCreateScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background }]}>
+    <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={[styles.heroCard, { backgroundColor: theme.heroPrimary, shadowColor: theme.shadow }]}>
+        <View style={styles.heroCard}>
           <View style={styles.heroIcon}>
             <Sparkles size={18} color="#fff" />
           </View>
@@ -126,28 +128,20 @@ export default function ResolutionCreateScreen() {
             return (
               <TouchableOpacity
                 key={preset}
-                style={[
-                  styles.pill,
-                  { borderColor: theme.border, backgroundColor: theme.surface },
-                  active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                ]}
+                style={[styles.pill, active && styles.pillActive]}
                 onPress={() => handlePresetSelect(preset)}
                 disabled={loading}
               >
-                <Text style={[styles.pillText, { color: active ? "#fff" : theme.textPrimary }]}>{preset} Weeks</Text>
+                <Text style={[styles.pillText, active && styles.pillTextActive]}>{preset} Weeks</Text>
               </TouchableOpacity>
             );
           })}
           <TouchableOpacity
-            style={[
-              styles.pill,
-              { borderColor: theme.border, backgroundColor: theme.surface },
-              customVisible && { backgroundColor: theme.accent, borderColor: theme.accent },
-            ]}
+            style={[styles.pill, customVisible && styles.pillActive]}
             onPress={handleCustomSelect}
             disabled={loading}
           >
-            <Text style={[styles.pillText, { color: customVisible ? "#fff" : theme.textPrimary }]}>Custom</Text>
+            <Text style={[styles.pillText, customVisible && styles.pillTextActive]}>Custom</Text>
           </TouchableOpacity>
         </View>
         <Text style={[styles.helperSmall, { color: theme.textSecondary }]}>
@@ -172,7 +166,7 @@ export default function ResolutionCreateScreen() {
         {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
       </ScrollView>
 
-      <View style={[styles.ctaWrapper, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+      <View style={styles.ctaWrapper}>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: theme.accent, shadowColor: theme.shadow }, !canSubmit && styles.buttonDisabled]}
           onPress={handleSubmit}
@@ -211,126 +205,162 @@ function clampDuration(value: string): string {
   const clamped = Math.min(52, Math.max(MIN_DURATION, number));
   return String(clamped);
 }
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  container: {
-    padding: 20,
-    flexGrow: 1,
-    gap: 16,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  heroCard: {
-    borderRadius: 24,
-    padding: 20,
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  heroIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  heroSubtitle: {
-    marginTop: 6,
-    color: "rgba(255,255,255,0.85)",
-  },
-  helperText: {
-    marginTop: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  inputCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-  },
-  input: {
-    minHeight: 140,
-    fontSize: 16,
-  },
-  counter: {
-    alignSelf: "flex-end",
-    fontSize: 12,
-    marginTop: 6,
-  },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 12,
-  },
-  pill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  pillText: {
-    fontWeight: "600",
-  },
-  helperSmall: {
-    marginTop: 6,
-    fontSize: 12,
-  },
-  durationInput: {
-    marginTop: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  button: {
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  error: {
-    marginTop: 12,
-  },
-  linkButton: {
-    marginTop: 12,
-    alignItems: "center",
-  },
-  linkText: {
-    fontWeight: "500",
-  },
-  ctaWrapper: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
-});
+const createStyles = (theme: ThemeTokens) => {
+  const heroTextColor = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const heroSubtitleColor = theme.mode === "dark" ? theme.textSecondary : "rgba(255,255,255,0.85)";
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      padding: 20,
+      flexGrow: 1,
+      gap: 16,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+      backgroundColor: theme.background,
+    },
+    heroCard: {
+      borderRadius: 24,
+      padding: 20,
+      backgroundColor: theme.heroPrimary,
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
+      shadowColor: theme.shadow,
+    },
+    heroIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    heroTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: heroTextColor,
+    },
+    heroSubtitle: {
+      marginTop: 6,
+      color: heroSubtitleColor,
+    },
+    helperText: {
+      marginTop: 8,
+      color: theme.textSecondary,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    inputCard: {
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 14,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    input: {
+      minHeight: 140,
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    counter: {
+      alignSelf: "flex-end",
+      fontSize: 12,
+      marginTop: 6,
+      color: theme.textMuted,
+    },
+    pillRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+      marginTop: 12,
+    },
+    pill: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    pillActive: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    pillText: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    pillTextActive: {
+      color: accentForeground,
+    },
+    helperSmall: {
+      marginTop: 6,
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    durationInput: {
+      marginTop: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      padding: 12,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      color: theme.textPrimary,
+    },
+    button: {
+      flexDirection: "row",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      shadowColor: theme.shadow,
+      backgroundColor: theme.accent,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    buttonText: {
+      color: accentForeground,
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    error: {
+      marginTop: 12,
+      color: theme.danger,
+    },
+    linkButton: {
+      marginTop: 12,
+      alignItems: "center",
+    },
+    linkText: {
+      fontWeight: "500",
+      color: theme.accent,
+    },
+    ctaWrapper: {
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+  });
+};

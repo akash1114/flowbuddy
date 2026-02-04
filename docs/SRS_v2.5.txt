@@ -1,10 +1,10 @@
-FlowBuddy: System Requir ements Speciﬁcation (SRS) v2.5 - FINAL
+Sarthi: System Requir ements Speciﬁcation (SRS) v2.5 - FINAL
 Version:  2.5 - Agentic Coach with Psychological Safety
 Date:  January 3, 2026
 Project:  Comet Resolution v2 Hackathon - Productivity Category
 Status:  Implementation-Ready
 🎯 Product Philosophy: "Supportive Autonomy"
-The Reconciliation:  FlowBuddy is an agentic AI coach  (proactive, autonomous, outcome-focused) that
+The Reconciliation:  Sarthi is an agentic AI coach  (proactive, autonomous, outcome-focused) that
 operates with psychological safety principles  (non-judgmental, permission-based, respects cognitive load).
 Core Tension Resolved:
 ✅ Agentic:  Takes initiative, plans autonomously , intervenes predictively
@@ -13,7 +13,7 @@ Core Tension Resolved:
 Voice Example:
 ❌ Pushy Coach: "Y ou missed your workout. Get it done by 6 PM."
 ❌ Passive Tool: "W ould you like me to suggest a workout time?"
-✅ FlowBuddy:  "I noticed you missed 9 AM. I moved it to 6 PM (your usual backup time). Work for
+✅ Sarthi:  "I noticed you missed 9 AM. I moved it to 6 PM (your usual backup time). Work for
 you? [Y es] [Pick dif ferent time] [Skip today]"
 Table of Contents
 1. Hackathon Alignment & MVP  Scope
@@ -33,7 +33,7 @@ Table of Contents
 1.1 Hackathon Requir ements
 Comet Resolution v2:  Build an AI agent that meaningfully helps people keep their resolutions with measurable
 impact and observability .
-FlowBuddy's Fit:
+Sarthi's Fit:
 ✅ Agentic Behavior:  3 autonomous agents (decomposer , scheduler , accountability)
 ✅ Measurable Impact:  Resolution completion rate, habit consistency , intervention ef fectiveness
 ✅ Observability:  Full Opik integration with 12+ metrics (AI quality + user outcomes + guardrails)
@@ -606,7 +606,7 @@ Week 2: Weekly Planner  + Permissions
  Opik: weekly_planning trace + plan_acceptance_rate metric
 Deliverable:  Agent generates Week 2 plan autonomously , user can review/pause
 Week 3: Intervention System + Guardrails
- Thursday slippage detection jobFlowBuddy Outcomes Dashboard
+ Thursday slippage detection jobSarthi Outcomes Dashboard
 ────────────────────────────
 Outcome Metrics:
 - Resolution Completion: 72% ✅  (target: 70%)

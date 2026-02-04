@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,8 @@ import { getTask, updateTask } from "../api/tasks";
 import { useUserId } from "../state/user";
 import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useTaskSchedule } from "../hooks/useTaskSchedule";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TaskEdit">;
 
@@ -27,6 +29,8 @@ export default function TaskEditScreen() {
   const route = useRoute<Props["route"]>();
   const { taskId } = route.params;
   const { userId } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [title, setTitle] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -144,7 +148,7 @@ export default function TaskEditScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Loading task…</Text>
       </View>
     );
@@ -161,6 +165,7 @@ export default function TaskEditScreen() {
         onChangeText={setTitle}
         style={styles.input}
         placeholder="Task title"
+        placeholderTextColor={theme.textMuted}
       />
 
       <View style={styles.row}>
@@ -188,11 +193,16 @@ export default function TaskEditScreen() {
         onChangeText={setNote}
         style={[styles.input, styles.noteInput]}
         placeholder="Add a note..."
+        placeholderTextColor={theme.textMuted}
         multiline
       />
 
       <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
+        {saving ? (
+          <ActivityIndicator color={theme.mode === "dark" ? theme.textPrimary : "#fff"} />
+        ) : (
+          <Text style={styles.buttonText}>Save Changes</Text>
+        )}
       </TouchableOpacity>
       {pickerState ? (
         <Modal transparent animationType="fade" visible={true}>
@@ -220,101 +230,115 @@ export default function TaskEditScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 12,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  label: {
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
-    borderRadius: 12,
-    padding: 12,
-  },
-  placeholderText: {
-    color: "#9CA3AF",
-  },
-  valueText: {
-    color: "#111827",
-  },
-  noteInput: {
-    minHeight: 120,
-    textAlignVertical: "top",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: "#1a73e8",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    backgroundColor: "#8fb5f8",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  helper: {
-    marginTop: 8,
-    color: "#666",
-  },
-  error: {
-    color: "#c62828",
-  },
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  pickerCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 12,
-  },
-  pickerActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  pickerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  pickerButtonText: {
-    fontWeight: "600",
-  },
-  pickerConfirm: {
-    backgroundColor: "#e8f0fe",
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  pickerConfirmText: {
-    color: "#1a73e8",
-  },
-});
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+
+  return StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 12,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    label: {
+      fontWeight: "600",
+      marginBottom: 4,
+      color: theme.textSecondary,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: theme.card,
+      color: theme.textPrimary,
+    },
+    placeholderText: {
+      color: theme.textMuted,
+    },
+    valueText: {
+      color: theme.textPrimary,
+    },
+    noteInput: {
+      minHeight: 120,
+      textAlignVertical: "top",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    button: {
+      marginTop: 16,
+      backgroundColor: theme.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    buttonDisabled: {
+      backgroundColor: theme.accentSoft,
+    },
+    buttonText: {
+      color: accentForeground,
+      fontWeight: "600",
+    },
+    helper: {
+      marginTop: 8,
+      color: theme.textSecondary,
+    },
+    error: {
+      color: theme.danger,
+    },
+    pickerOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 16,
+    },
+    pickerCard: {
+      width: "100%",
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    pickerActions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    pickerButton: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    pickerButtonText: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    pickerConfirm: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 10,
+      marginLeft: 8,
+    },
+    pickerConfirmText: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+  });
+};
 
 function parseDate(value: string): Date | null {
   if (!value) return null;

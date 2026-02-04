@@ -172,6 +172,11 @@ def _estimate_tasks_per_day(tasks: List[Dict[str, Any]]) -> Dict[str, int]:
     for task in tasks:
         if _task_duration(task) < 15:
             continue
+        scheduled_day = task.get("scheduled_day") or task.get("suggested_day")
+        if scheduled_day:
+            counts.setdefault(str(scheduled_day), 0)
+            counts[str(scheduled_day)] += 1
+            continue
         cadence_type, cadence_count = _cadence_estimate(task)
         if cadence_type == "daily":
             counts.setdefault("daily", 0)

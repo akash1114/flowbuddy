@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,12 +15,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { listWeeklyPlanHistory, WeeklyPlanHistoryItem } from "../api/weeklyPlan";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "WeeklyPlanHistory">;
 
 export default function WeeklyPlanHistoryScreen() {
   const { userId, loading: userLoading } = useUserId();
   const navigation = useNavigation<Nav>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [items, setItems] = useState<WeeklyPlanHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +54,7 @@ export default function WeeklyPlanHistoryScreen() {
   if (userLoading || (loading && !refreshing)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Loading history…</Text>
       </View>
     );
@@ -96,93 +100,97 @@ export default function WeeklyPlanHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 12,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 30,
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-    color: "#2D3748",
-  },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    padding: 16,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardText: {
-    flex: 1,
-  },
-  cardWeek: {
-    textTransform: "uppercase",
-    fontSize: 12,
-    color: "#94A3B8",
-  },
-  cardTitle: {
-    marginTop: 4,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  cardMeta: {
-    marginTop: 4,
-    color: "#6B7280",
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontWeight: "600",
-  },
-  badgeGreen: {
-    backgroundColor: "#DCFCE7",
-  },
-  badgeGray: {
-    backgroundColor: "#E5E7EB",
-  },
-  helper: {
-    marginTop: 12,
-    color: "#666",
-  },
-  errorBox: {
-    backgroundColor: "#fdecea",
-    borderRadius: 12,
-    padding: 12,
-  },
-  error: {
-    color: "#c62828",
-  },
-  retryButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#c62828",
-    borderRadius: 8,
-  },
-  retryText: {
-    color: "#c62828",
-    fontWeight: "600",
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      padding: 16,
+      gap: 12,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 30,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+      color: theme.textPrimary,
+    },
+    card: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+      backgroundColor: theme.card,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    cardRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    cardText: {
+      flex: 1,
+    },
+    cardWeek: {
+      textTransform: "uppercase",
+      fontSize: 12,
+      color: theme.textMuted,
+    },
+    cardTitle: {
+      marginTop: 4,
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    cardMeta: {
+      marginTop: 4,
+      color: theme.textSecondary,
+    },
+    badge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.surfaceMuted,
+    },
+    badgeText: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    badgeGreen: {
+      backgroundColor: "rgba(34,197,94,0.25)",
+    },
+    badgeGray: {
+      backgroundColor: theme.surface,
+    },
+    helper: {
+      marginTop: 12,
+      color: theme.textSecondary,
+    },
+    errorBox: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 12,
+      padding: 12,
+    },
+    error: {
+      color: theme.danger,
+    },
+    retryButton: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: theme.danger,
+      borderRadius: 8,
+    },
+    retryText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+  });

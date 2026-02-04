@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -16,12 +16,16 @@ import { CheckCircle, ShieldAlert } from "lucide-react-native";
 import { listInterventionsHistory, InterventionHistoryItem } from "../api/interventions";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "InterventionsHistory">;
 
 export default function InterventionsHistoryScreen() {
   const { userId, loading: userLoading } = useUserId();
   const navigation = useNavigation<Nav>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [items, setItems] = useState<InterventionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export default function InterventionsHistoryScreen() {
   if ((userLoading || loading) && !refreshing) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#6B8DBF" />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Loading intervention history…</Text>
       </View>
     );
@@ -79,7 +83,7 @@ export default function InterventionsHistoryScreen() {
           onPress={() => navigation.navigate("InterventionsHistoryDetail", { logId: item.id })}
         >
           <View style={styles.iconColumn}>
-            {item.flagged ? <ShieldAlert size={28} color="#B45309" /> : <CheckCircle size={28} color="#15803D" />}
+            {item.flagged ? <ShieldAlert size={28} color={theme.warning} /> : <CheckCircle size={28} color={theme.success} />}
           </View>
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle}>{item.flagged ? "Slippage Detected" : "On Track"}</Text>
@@ -93,76 +97,77 @@ export default function InterventionsHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 12,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FAFAF8",
-  },
-  title: {
-    fontSize: 28,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    padding: 16,
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  iconColumn: {
-    width: 40,
-    alignItems: "center",
-  },
-  cardBody: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  cardMeta: {
-    marginTop: 4,
-    color: "#6B7280",
-  },
-  helper: {
-    marginTop: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  errorBox: {
-    backgroundColor: "#fdecea",
-    borderRadius: 12,
-    padding: 12,
-  },
-  error: {
-    color: "#c62828",
-  },
-  retryButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#c62828",
-    borderRadius: 8,
-  },
-  retryText: {
-    color: "#c62828",
-    fontWeight: "600",
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      padding: 16,
+      gap: 12,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 28,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    card: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+      backgroundColor: theme.card,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    iconColumn: {
+      width: 40,
+      alignItems: "center",
+    },
+    cardBody: {
+      flex: 1,
+    },
+    cardTitle: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    cardMeta: {
+      marginTop: 4,
+      color: theme.textSecondary,
+    },
+    helper: {
+      marginTop: 12,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    errorBox: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 12,
+      padding: 12,
+    },
+    error: {
+      color: theme.danger,
+    },
+    retryButton: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: theme.danger,
+      borderRadius: 8,
+    },
+    retryText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+  });

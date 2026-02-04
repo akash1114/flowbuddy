@@ -24,6 +24,7 @@ import { sortTasksBySchedule, getLocalDateKey } from "../utils/datetime";
 import * as dashboardApi from "../api/dashboard";
 import type { DashboardResolution } from "../api/dashboard";
 import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MyWeek">;
 
@@ -48,6 +49,9 @@ export default function MyWeekScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userId, loading: userLoading } = useUserId();
   const { theme, isDark } = useTheme();
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const accentSoftForeground = theme.mode === "dark" ? theme.textPrimary : theme.accent;
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const {
     tasks,
     loading,
@@ -188,7 +192,7 @@ export default function MyWeekScreen() {
               style={[styles.editChip, { backgroundColor: theme.accentSoft }]}
               onPress={() => navigation.navigate("TaskEdit", { taskId: item.id })}
             >
-              <Text style={[styles.editChipText, { color: theme.accentText }]}>Edit</Text>
+              <Text style={[styles.editChipText, { color: accentSoftForeground }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.noteButton} onPress={() => openNoteModal(item)} disabled={noteSaving}>
               <Text style={[styles.noteButtonText, { color: accentColor }]}>{item.note ? "Edit note" : "Add note"}</Text>
@@ -360,7 +364,11 @@ export default function MyWeekScreen() {
                 onPress={handleSaveNote}
                 disabled={saveDisabled}
               >
-                {noteSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+                {noteSaving ? (
+                  <ActivityIndicator color={accentForeground} />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -375,7 +383,7 @@ export default function MyWeekScreen() {
     <View style={[styles.container, { backgroundColor }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#94A3B8" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.textSecondary} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topBar}>
@@ -416,7 +424,7 @@ export default function MyWeekScreen() {
                 ]}
               >
                <View style={styles.focusTitleRow}>
-                 <Target size={18} color="#818CF8" />
+                 <Target size={18} color={theme.accent} />
                   <Text style={[styles.focusCardTitle, { color: textPrimary }]} numberOfLines={1}>
                     {focus.title}
                  </Text>
@@ -430,7 +438,7 @@ export default function MyWeekScreen() {
                       styles.progressFill,
                       {
                         width: `${Math.min(100, focus.progressPercentage)}%`,
-                        backgroundColor: "#6366F1",
+                        backgroundColor: theme.accent,
                       },
                     ]}
                   />
@@ -456,7 +464,7 @@ export default function MyWeekScreen() {
             </View>
           )}
         </ScrollView>
-        {focusError ? <Text style={[styles.errorText, { color: "#F87171" }]}>{focusError}</Text> : null}
+        {focusError ? <Text style={[styles.errorText, { color: theme.danger }]}>{focusError}</Text> : null}
 
         <View style={styles.timelineHeader}>
           <View style={styles.timelineTitleRow}>
@@ -485,7 +493,7 @@ export default function MyWeekScreen() {
                   {section.title}
                 </Text>
                 {section.isToday ? (
-                  <Text style={[styles.todayBadge, { backgroundColor: theme.accentSoft, color: theme.accentText }]}>
+                  <Text style={[styles.todayBadge, { backgroundColor: theme.accentSoft, color: accentSoftForeground }]}>
                     Today
                   </Text>
                 ) : null}
@@ -529,262 +537,307 @@ function formatWeekRange(start: string, end: string, formatter: Intl.DateTimeFor
   return `${formatter.format(startDate)} - ${formatter.format(endDate)}`;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  helper: {
-    marginTop: 8,
-    textAlign: "center",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  sectionHeading: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  sectionSubtitle: {
-    marginTop: 4,
-    fontSize: 14,
-  },
-  focusScroll: {
-    paddingVertical: 4,
-    paddingRight: 20,
-  },
-  focusCard: {
-    width: 260,
-    padding: 20,
-    marginRight: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  focusTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  focusCardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    flex: 1,
-  },
-  focusFraction: {
-    marginTop: 12,
-    fontWeight: "600",
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    marginTop: 8,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  focusRange: {
-    marginTop: 10,
-    fontSize: 12,
-  },
-  focusLoading: {
-    width: 220,
-    height: 140,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  focusLoadingText: {
-    marginTop: 8,
-    fontWeight: "500",
-  },
-  timelineHeader: {
-    marginTop: 28,
-    marginBottom: 12,
-  },
-  timelineTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  loadingBlock: {
-    paddingVertical: 32,
-    alignItems: "center",
-  },
-  daySection: {
-    marginBottom: 24,
-  },
-  dayHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  dayTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  todayBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  noteText: {
-    marginTop: 8,
-  },
-  noteButton: {
-    marginLeft: 12,
-    paddingVertical: 6,
-  },
-  noteButtonText: {
-    fontWeight: "600",
-  },
-  editChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  editChipText: {
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  emptyCard: {
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  emptySubtitle: {
-    marginTop: 6,
-    fontSize: 14,
-  },
-  createButton: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  errorText: {
-    marginTop: 12,
-    fontWeight: "600",
-  },
-  metaCard: {
-    marginTop: 24,
-    padding: 16,
-    borderRadius: 16,
-  },
-  metaText: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  modalCard: {
-    borderRadius: 20,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  noteInput: {
-    borderWidth: 1,
-    borderRadius: 16,
-    minHeight: 110,
-    padding: 12,
-    textAlignVertical: "top",
-  },
-  noteCounter: {
-    alignSelf: "flex-end",
-    marginTop: 6,
-    fontSize: 12,
-  },
-  modalActions: {
-    marginTop: 16,
-  },
-  clearText: {
-    color: "#DC2626",
-    fontWeight: "600",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 16,
-  },
-  modalButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  primary: {
-    backgroundColor: "#4338CA",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  secondaryText: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-});
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const accentSoftForeground = theme.mode === "dark" ? theme.textPrimary : theme.accent;
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+      backgroundColor: theme.background,
+    },
+    helper: {
+      marginTop: 8,
+      textAlign: "center",
+      color: theme.textSecondary,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40,
+    },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 24,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    screenTitle: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    sectionHeading: {
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    sectionSubtitle: {
+      marginTop: 4,
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    focusScroll: {
+      paddingVertical: 4,
+      paddingRight: 20,
+    },
+    focusCard: {
+      width: 260,
+      padding: 20,
+      marginRight: 16,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
+    },
+    focusTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    focusCardTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      flex: 1,
+      color: theme.textPrimary,
+    },
+    focusFraction: {
+      marginTop: 12,
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    progressTrack: {
+      height: 6,
+      borderRadius: 999,
+      marginTop: 8,
+      overflow: "hidden",
+      backgroundColor: theme.surfaceMuted,
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 999,
+      backgroundColor: theme.accent,
+    },
+    focusRange: {
+      marginTop: 10,
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    focusLoading: {
+      width: 220,
+      height: 140,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.surfaceMuted,
+    },
+    focusLoadingText: {
+      marginTop: 8,
+      fontWeight: "500",
+      color: theme.textSecondary,
+    },
+    timelineHeader: {
+      marginTop: 28,
+      marginBottom: 12,
+    },
+    timelineTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
+    loadingBlock: {
+      paddingVertical: 32,
+      alignItems: "center",
+    },
+    daySection: {
+      marginBottom: 24,
+    },
+    dayHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    dayTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    todayBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      fontWeight: "600",
+      fontSize: 12,
+      backgroundColor: theme.accentSoft,
+      color: accentSoftForeground,
+    },
+    noteText: {
+      marginTop: 8,
+      color: theme.textSecondary,
+    },
+    noteButton: {
+      marginLeft: 12,
+      paddingVertical: 6,
+    },
+    noteButtonText: {
+      fontWeight: "600",
+      color: theme.accent,
+    },
+    editChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.accentSoft,
+    },
+    editChipText: {
+      fontWeight: "600",
+      fontSize: 12,
+      color: accentSoftForeground,
+    },
+    footerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 8,
+    },
+    emptyCard: {
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    emptySubtitle: {
+      marginTop: 6,
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    createButton: {
+      marginTop: 16,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 16,
+      backgroundColor: theme.accent,
+    },
+    createButtonText: {
+      color: accentForeground,
+      fontWeight: "700",
+    },
+    errorText: {
+      marginTop: 12,
+      fontWeight: "600",
+      color: theme.danger,
+    },
+    metaCard: {
+      marginTop: 24,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: theme.surfaceMuted,
+    },
+    metaText: {
+      fontSize: 12,
+      marginBottom: 4,
+      color: theme.textSecondary,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: "center",
+      padding: 16,
+    },
+    modalCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: theme.card,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 12,
+      color: theme.textPrimary,
+    },
+    noteInput: {
+      borderWidth: 1,
+      borderRadius: 16,
+      minHeight: 110,
+      padding: 12,
+      textAlignVertical: "top",
+      borderColor: theme.border,
+      color: theme.textPrimary,
+      backgroundColor: theme.surface,
+    },
+    noteCounter: {
+      alignSelf: "flex-end",
+      marginTop: 6,
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    modalActions: {
+      marginTop: 16,
+    },
+    clearText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+    modalButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+      marginTop: 16,
+    },
+    modalButton: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+    },
+    primary: {
+      backgroundColor: theme.accent,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: accentForeground,
+      fontWeight: "600",
+    },
+    secondaryText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
+  });
+};

@@ -19,6 +19,7 @@ import { useTheme } from "../theme";
 import * as Notifications from "expo-notifications";
 import { updateTaskCompletion } from "../api/tasks";
 import { useUserId } from "../state/user";
+import BrainDumpModal from "./components/BrainDumpModal";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -48,8 +49,8 @@ export default function FocusModeScreen() {
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [isActive, setIsActive] = useState(true);
   const [isDistracted, setIsDistracted] = useState(false);
-  const [distractionText, setDistractionText] = useState("");
   const [capturedThoughts, setCapturedThoughts] = useState<string[]>([]);
+  const [brainDumpVisible, setBrainDumpVisible] = useState(false);
   const [dndActive, setDndActive] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
@@ -109,8 +110,8 @@ export default function FocusModeScreen() {
   }, []);
 
   const handleDistracted = () => {
-    setIsDistracted(true);
     setIsActive(false);
+    setBrainDumpVisible(true);
   };
 
   const finishSession = async () => {
@@ -147,15 +148,8 @@ export default function FocusModeScreen() {
     ]);
   };
 
-  const handleClearMind = () => {
-    if (distractionText.trim()) {
-      setCapturedThoughts((prev) => [...prev, distractionText.trim()]);
-    }
-    setDistractionText("");
-    setIsDistracted(false);
-    if (timeLeft > 0) {
-      setIsActive(true);
-    }
+  const handleBrainDumpSaved = (entry: { acknowledgement: string; actionable: boolean; actionableItems: string[]; topics: string[]; sentiment: number; text: string }) => {
+    setCapturedThoughts((prev) => [...prev, entry.text]);
   };
 
   return (
@@ -245,36 +239,18 @@ export default function FocusModeScreen() {
         </View>
       </View>
 
-      {isDistracted ? (
-        <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View style={[styles.overlayCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <View style={styles.overlayHeader}>
-                <Wind size={20} color={theme.accent} />
-                <Text style={[styles.overlayTitle, { color: theme.textPrimary }]}>What&apos;s on your mind?</Text>
-              </View>
-              <Text style={[styles.overlaySubtitle, { color: theme.textSecondary }]}>
-                Park it here and we&apos;ll keep it safe outside the session.
-              </Text>
-              <TextInput
-                value={distractionText}
-                onChangeText={setDistractionText}
-                placeholder="Jot the thought, worry, or reminder..."
-                placeholderTextColor={theme.textMuted}
-                multiline
-                style={[styles.textArea, { color: theme.textPrimary, borderColor: theme.border, backgroundColor: theme.surface }]}
-              />
-              <TouchableOpacity
-                style={[styles.overlayButton, { backgroundColor: theme.accent }]}
-                onPress={handleClearMind}
-              >
-                <Play size={18} color="#fff" />
-                <Text style={styles.overlayButtonText}>Release & resume</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      ) : null}
+      <BrainDumpModal
+        visible={brainDumpVisible}
+        onClose={() => {
+          setBrainDumpVisible(false);
+          if (timeLeft > 0) {
+            setIsActive(true);
+          }
+        }}
+        onSaved={handleBrainDumpSaved}
+        title="Capture your thought"
+        subtitle="Park it here and we’ll keep it safe outside the session."
+      />
     </SafeAreaView>
   );
 }

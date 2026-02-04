@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text,
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Settings, Plus, Brain, Target, Calendar, Shield, CheckSquare, Play, Hexagon, Moon, Sun, Zap } from "lucide-react-native";
+import { Settings, Plus, Brain, Target, Calendar, Shield, CheckSquare, Play, Hexagon, Moon, Sun, Zap, Sparkles } from "lucide-react-native";
 import * as dashboardApi from "../api/dashboard";
 import * as tasksApi from "../api/tasks";
 import type { TaskItem } from "../api/tasks";
@@ -14,6 +14,7 @@ import DailyJourneyWidget from "../components/DailyJourneyWidget";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
 import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 const PRAISE_MESSAGES = [
   "Great job!",
@@ -50,8 +51,10 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [praise, setPraise] = useState<string | null>(null);
   const [taskTab, setTaskTab] = useState<"remaining" | "completed">("remaining");
+  const [hasActiveResolutions, setHasActiveResolutions] = useState(false);
   const praiseOpacity = useRef(new Animated.Value(0)).current;
   const { theme, isDark, toggleTheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const greeting = useMemo(() => getGreeting(new Date()), []);
   const subtitleDate = useMemo(() => formatSubtitleDate(new Date()), []);
@@ -71,7 +74,8 @@ export default function HomeScreen() {
         journeyPromise,
       ]);
 
-      const resolutionLookup = dashboardResult.dashboard.active_resolutions.reduce<Record<string, string>>((acc, resolution) => {
+      const activeResolutions = dashboardResult.dashboard.active_resolutions;
+      const resolutionLookup = activeResolutions.reduce<Record<string, string>>((acc, resolution) => {
         acc[resolution.resolution_id] = resolution.title;
         return acc;
       }, {});
@@ -88,6 +92,7 @@ export default function HomeScreen() {
       }));
       setTodayFlow(sortFlowTasks(mappedTasks));
       setJourneyCategories(journeyResult?.categories ?? []);
+      setHasActiveResolutions(activeResolutions.length > 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to refresh your workspace.");
     } finally {
@@ -136,6 +141,8 @@ export default function HomeScreen() {
   const borderColor = theme.border;
   const heroCardColor = theme.heroPrimary;
   const heroRestColor = theme.heroRest;
+  const celebrationBackground = theme.mode === "dark" ? "rgba(34,197,94,0.18)" : "rgba(16,185,129,0.18)";
+  const celebrationAccent = theme.mode === "dark" ? theme.success : "#166534";
   const errorColor = theme.danger;
 
   const quickActions = useMemo(
@@ -303,12 +310,28 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.heroWrapper}>
-            {heroTask ? (
+            {!hasActiveResolutions ? (
+              <View style={[styles.heroCard, styles.heroEmptyCard, { shadowColor: theme.shadow }]}>
+                <Text style={styles.heroLabel}>Let&apos;s begin</Text>
+                <Text style={[styles.heroTitle, { color: textPrimary }]}>Create your first resolution</Text>
+                <Text style={[styles.heroTime, { color: textSecondary }]}>Sarthi needs a mission to coach you.</Text>
+                <TouchableOpacity
+                  style={[styles.heroCTAButton, { backgroundColor: theme.accent }]}
+                  onPress={() => navigation.navigate("ResolutionCreate")}
+                >
+                  <Sparkles size={16} color={theme.mode === "dark" ? textPrimary : "#fff"} />
+                  <Text style={[styles.heroCTAButtonText, { color: theme.mode === "dark" ? textPrimary : "#fff" }]}>
+                    Start a resolution
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : heroTask ? (
               <View style={[styles.heroCard, { backgroundColor: heroCardColor, shadowColor: theme.shadow }]}>
                 <Text style={styles.heroLabel}>UP NEXT</Text>
                 <Text style={styles.heroTitle}>{heroTask.title}</Text>
                 <Text style={styles.heroTime}>
                   {heroTask.scheduled_time ? formatTime(heroTask.scheduled_time) : "Anytime today"}
+                  {heroTask.duration_min ? ` • ${heroTask.duration_min} min` : ""}
                 </Text>
                 <TouchableOpacity
                   style={[styles.heroButton, { backgroundColor: theme.surface, shadowColor: theme.shadow }]}
@@ -324,6 +347,19 @@ export default function HomeScreen() {
                   <Text style={[styles.heroButtonText, { color: textPrimary }]}>Enter Focus Mode</Text>
                 </TouchableOpacity>
               </View>
+            ) : allDone ? (
+              <View
+                style={[
+                  styles.heroCard,
+                  styles.celebrationCard,
+                  { backgroundColor: celebrationBackground, shadowColor: theme.shadow, borderColor: theme.success },
+                ]}
+              >
+                <Text style={styles.celebrationEmoji}>🎉</Text>
+                <Text style={[styles.heroTitle, { color: celebrationAccent }]}>All clear!</Text>
+                <Text style={[styles.heroTime, { color: textSecondary }]}>Every task today is wrapped.</Text>
+                <Text style={[styles.heroTime, { color: textSecondary }]}>Celebrate the momentum.</Text>
+              </View>
             ) : (
               <View
                 style={[
@@ -332,9 +368,16 @@ export default function HomeScreen() {
                   { backgroundColor: heroRestColor, shadowColor: theme.shadow },
                 ]}
               >
-                <Text style={styles.heroLabel}>ALL CLEAR</Text>
-                <Text style={styles.heroTitle}>Rest up, you&apos;re done for the day!</Text>
-                <Text style={styles.heroTime}>Reflect, recover, and plan tomorrow.</Text>
+                <Text style={styles.heroLabel}>READY</Text>
+                <Text style={styles.heroTitle}>Nothing scheduled yet</Text>
+                <Text style={styles.heroTime}>Approve a plan or create a task to fill your day.</Text>
+                <TouchableOpacity
+                  style={[styles.heroButton, styles.heroCTAButton]}
+                  onPress={() => navigation.navigate("ResolutionCreate")}
+                >
+                  <Plus size={18} color={theme.accent} />
+                  <Text style={[styles.heroButtonText, { color: textPrimary }]}>Create a Resolution</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -579,273 +622,321 @@ function formatTime(value: string): string {
   return value;
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FAFAF8",
-  },
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 120,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  brandIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  headerControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  controlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  greetingBlock: {
-    marginBottom: 16,
-  },
-  greeting: {
-    fontSize: 26,
-    color: "#1D2433",
-    fontWeight: "700",
-  },
-  greetingSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  greetingHint: {
-    color: "#64748B",
-    marginTop: 4,
-  },
-  quickActionsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 24,
-  },
-  quickAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  quickActionText: {
-    fontWeight: "600",
-    color: "#1E293B",
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#2D3748",
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B8DBF",
-  },
-  energySection: {
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  heroWrapper: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  heroCard: {
-    borderRadius: 28,
-    padding: 24,
-    backgroundColor: "#312E81",
-    shadowColor: "#111",
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 5,
-  },
-  heroRestCard: {
-    backgroundColor: "#0F172A",
-  },
-  heroLabel: {
-    color: "#C7D2FE",
-    fontSize: 12,
-    letterSpacing: 3,
-    fontWeight: "700",
-  },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#fff",
-    marginTop: 12,
-  },
-  heroTime: {
-    marginTop: 6,
-    color: "#E0E7FF",
-  },
-  heroButton: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  heroButtonText: {
-    fontWeight: "700",
-    color: "#1E1B4B",
-    fontSize: 16,
-  },
-  praiseToast: {
-    position: "absolute",
-    bottom: 120,
-    alignSelf: "center",
-    backgroundColor: "rgba(15,16,36,0.9)",
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  praiseText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  emptyTasksCard: {
-    padding: 20,
-    borderRadius: 18,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  emptyTasksTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1A202C",
-  },
-  emptyTasksSubtitle: {
-    color: "#718096",
-    marginTop: 6,
-  },
-  emojiCelebration: {
-    fontSize: 40,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  taskTabs: {
-    flexDirection: "row",
-    marginBottom: 12,
-    gap: 8,
-  },
-  taskTabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  taskTabActive: {
-    backgroundColor: "#1a73e8",
-    borderColor: "#1a73e8",
-  },
-  taskTabText: {
-    fontWeight: "600",
-    color: "#475467",
-  },
-  taskTabActiveText: {
-    color: "#fff",
-  },
-  fabContainer: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    alignItems: "flex-end",
-  },
-  fabOptions: {
-    marginBottom: 12,
-    gap: 10,
-  },
-  fabPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-  },
-  fabPillText: {
-    color: "#fff",
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  fabMain: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.15)",
-  },
-  loadingState: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  errorText: {
-    color: "#C53030",
-    marginBottom: 12,
-  },
-});
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const heroTextColor = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const heroLabelColor = theme.mode === "dark" ? theme.textSecondary : "rgba(255,255,255,0.7)";
+
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    flex: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 120,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24,
+    },
+    brandRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    brandIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.surfaceMuted,
+    },
+    brandTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+      color: theme.textPrimary,
+    },
+    headerControls: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    controlButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    greetingBlock: {
+      marginBottom: 16,
+    },
+    greeting: {
+      fontSize: 26,
+      color: theme.textPrimary,
+      fontWeight: "700",
+    },
+    greetingSubtitle: {
+      fontSize: 14,
+      marginTop: 4,
+      color: theme.textSecondary,
+    },
+    greetingHint: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    quickActionsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 24,
+    },
+    quickAction: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      backgroundColor: theme.surface,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
+    },
+    quickActionText: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+      marginTop: 8,
+    },
+    sectionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    linkText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.accent,
+    },
+    energySection: {
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    heroWrapper: {
+      marginTop: 8,
+      marginBottom: 20,
+    },
+    heroCard: {
+      borderRadius: 28,
+      padding: 24,
+      backgroundColor: theme.heroPrimary,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 5,
+    },
+    heroRestCard: {
+      backgroundColor: theme.heroRest,
+    },
+    heroEmptyCard: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    heroEmptyCard: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    heroLabel: {
+      color: heroLabelColor,
+      fontSize: 12,
+      letterSpacing: 3,
+      fontWeight: "700",
+    },
+    heroTitle: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: heroTextColor,
+      marginTop: 12,
+    },
+    heroTime: {
+      marginTop: 6,
+      color: heroTextColor,
+    },
+    heroButton: {
+      marginTop: 20,
+      paddingVertical: 14,
+      borderRadius: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: theme.surface,
+    },
+    heroCTAButton: {
+      marginTop: 20,
+      paddingVertical: 14,
+      borderRadius: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    heroCTAButtonText: {
+      fontWeight: "700",
+      fontSize: 16,
+    },
+    heroButtonText: {
+      fontWeight: "700",
+      color: theme.textPrimary,
+      fontSize: 16,
+    },
+    celebrationCard: {
+      borderRadius: 28,
+      borderWidth: 1,
+    },
+    celebrationEmoji: {
+      fontSize: 36,
+      marginBottom: 8,
+    },
+    praiseToast: {
+      position: "absolute",
+      bottom: 120,
+      alignSelf: "center",
+      backgroundColor: theme.overlay,
+      borderRadius: 999,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    praiseText: {
+      color: accentForeground,
+      fontWeight: "700",
+    },
+    emptyTasksCard: {
+      padding: 20,
+      borderRadius: 18,
+      backgroundColor: theme.card,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    emptyTasksTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    emptyTasksSubtitle: {
+      color: theme.textSecondary,
+      marginTop: 6,
+    },
+    emojiCelebration: {
+      fontSize: 40,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    taskTabs: {
+      flexDirection: "row",
+      marginBottom: 12,
+      gap: 8,
+    },
+    taskTabButton: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      backgroundColor: theme.surface,
+    },
+    taskTabActive: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    taskTabText: {
+      fontWeight: "600",
+      color: theme.textSecondary,
+    },
+    taskTabActiveText: {
+      color: accentForeground,
+    },
+    fabContainer: {
+      position: "absolute",
+      bottom: 24,
+      right: 24,
+      alignItems: "flex-end",
+    },
+    fabOptions: {
+      marginBottom: 12,
+      gap: 10,
+    },
+    fabPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      backgroundColor: theme.surface,
+    },
+    fabPillText: {
+      color: theme.textPrimary,
+      fontWeight: "600",
+      marginLeft: 8,
+    },
+    fabMain: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+      backgroundColor: theme.accent,
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.15)",
+    },
+    loadingState: {
+      paddingVertical: 40,
+      alignItems: "center",
+    },
+    errorText: {
+      color: theme.danger,
+      marginBottom: 12,
+    },
+  });
+};

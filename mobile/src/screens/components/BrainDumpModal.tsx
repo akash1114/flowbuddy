@@ -20,9 +20,19 @@ const MAX_LENGTH = 2000;
 type Props = {
   visible: boolean;
   onClose: () => void;
+  onSaved?: (entry: {
+    acknowledgement: string;
+    actionable: boolean;
+    actionableItems: string[];
+    topics: string[];
+    sentiment: number;
+    text: string;
+  }) => void;
+  title?: string;
+  subtitle?: string;
 };
 
-export default function BrainDumpModal({ visible, onClose }: Props) {
+export default function BrainDumpModal({ visible, onClose, onSaved, title, subtitle }: Props) {
   const { userId } = useUserId();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
@@ -62,13 +72,16 @@ export default function BrainDumpModal({ visible, onClose }: Props) {
         user_id: userId!,
         text: trimmed,
       });
-      setAck({
+      const response = {
         acknowledgement: data.acknowledgement,
         actionable: data.actionable,
         actionableItems: data.signals.actionable_items,
         topics: data.signals.topics,
         sentiment: data.signals.sentiment_score,
-      });
+        text: trimmed,
+      };
+      setAck(response);
+      onSaved?.(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to process that signal. Please try again.");
     } finally {
@@ -81,61 +94,57 @@ export default function BrainDumpModal({ visible, onClose }: Props) {
       <View style={[styles.container, { paddingBottom: insets.bottom || 24 }]}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View style={[styles.header, { paddingTop: (insets.top || 0) + 12 }]}>
-            <Text style={styles.headerTitle}>What's on your mind?</Text>
+            <Text style={styles.headerTitle}>{title ?? "What's on your mind?"}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>×</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={styles.body}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            multiline
-            placeholder="Let it out. We'll capture signals, not judge…"
-            placeholderTextColor="#A0A09A"
-            value={text}
-            onChangeText={setText}
-            maxLength={MAX_LENGTH}
-            textAlignVertical="top"
-          />
-          <Text style={styles.counter}>
-            {trimmed.length}/{MAX_LENGTH}
-          </Text>
+            <Text style={styles.subtitle}>{subtitle ?? "Let it out. We'll capture signals, not judge…"}</Text>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              multiline
+              placeholder="Let it out. We'll capture signals, not judge…"
+              placeholderTextColor="#A0A09A"
+              value={text}
+              onChangeText={setText}
+              maxLength={MAX_LENGTH}
+              textAlignVertical="top"
+            />
+            <Text style={styles.counter}>
+              {trimmed.length}/{MAX_LENGTH}
+            </Text>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          {loading ? (
-            <View style={styles.listening}>
-              <ActivityIndicator color="#2D3748" />
-              <Text style={styles.listeningText}>Listening…</Text>
-            </View>
-          ) : null}
+            {loading ? (
+              <View style={styles.listening}>
+                <ActivityIndicator color="#2D3748" />
+                <Text style={styles.listeningText}>Listening…</Text>
+              </View>
+            ) : null}
 
-          {ack ? (
-            <View style={styles.ackCard}>
-              <Text style={styles.ackTitle}>Acknowledgement</Text>
-              <Text style={styles.ackText}>{ack.acknowledgement}</Text>
-              <Text style={styles.ackMeta}>Sentiment: {ack.sentiment.toFixed(2)}</Text>
-              {ack.topics.length ? (
-                <Text style={styles.ackMeta}>Topics: {ack.topics.join(", ")}</Text>
-              ) : null}
-              {ack.actionableItems.length ? (
-                <View style={styles.actionableList}>
-                  {ack.actionableItems.map((item) => (
-                    <Text key={item} style={styles.actionableItem}>
-                      • {item}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-              {ack.actionable ? (
-                <TouchableOpacity style={styles.adjustButton}>
-                  <Text style={styles.adjustButtonText}>Would you like me to adjust your plan?</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
+            {ack ? (
+              <View style={styles.ackCard}>
+                <Text style={styles.ackTitle}>Acknowledgement</Text>
+                <Text style={styles.ackText}>{ack.acknowledgement}</Text>
+                <Text style={styles.ackMeta}>Sentiment: {ack.sentiment.toFixed(2)}</Text>
+                {ack.topics.length ? (
+                  <Text style={styles.ackMeta}>Topics: {ack.topics.join(", ")}</Text>
+                ) : null}
+                {ack.actionableItems.length ? (
+                  <View style={styles.actionableList}>
+                    {ack.actionableItems.map((item) => (
+                      <Text key={item} style={styles.actionableItem}>
+                        • {item}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom || 20 }]}>

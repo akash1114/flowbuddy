@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,12 +18,16 @@ import { createTask } from "../api/tasks";
 import { useUserId } from "../state/user";
 import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useTaskSchedule } from "../hooks/useTaskSchedule";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TaskCreate">;
 
 export default function TaskCreateScreen() {
   const navigation = useNavigation<Props["navigation"]>();
   const { userId } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [title, setTitle] = useState("");
   const [scheduledDay, setScheduledDay] = useState("");
@@ -135,6 +139,7 @@ export default function TaskCreateScreen() {
         value={title}
         onChangeText={setTitle}
         placeholder="e.g., Review project brief"
+        placeholderTextColor={theme.textMuted}
       />
 
       <Text style={styles.label}>Scheduled Day (optional)</Text>
@@ -157,6 +162,7 @@ export default function TaskCreateScreen() {
         value={duration}
         onChangeText={setDuration}
         placeholder="30"
+        placeholderTextColor={theme.textMuted}
         keyboardType="numeric"
       />
 
@@ -166,11 +172,16 @@ export default function TaskCreateScreen() {
         value={note}
         onChangeText={setNote}
         placeholder="Add context or prep details…"
+        placeholderTextColor={theme.textMuted}
         multiline
       />
 
       <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={handleCreate} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create Task</Text>}
+        {saving ? (
+          <ActivityIndicator color={theme.mode === "dark" ? theme.textPrimary : "#fff"} />
+        ) : (
+          <Text style={styles.buttonText}>Create Task</Text>
+        )}
       </TouchableOpacity>
       {pickerState ? (
         <Modal transparent animationType="fade" visible={true}>
@@ -198,91 +209,104 @@ export default function TaskCreateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  subtitle: {
-    color: "#4b5563",
-    marginBottom: 8,
-  },
-  label: {
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
-    borderRadius: 12,
-    padding: 12,
-  },
-  placeholder: {
-    color: "#9CA3AF",
-  },
-  pickerValue: {
-    color: "#111827",
-  },
-  noteInput: {
-    minHeight: 120,
-    textAlignVertical: "top",
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: "#1a73e8",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    backgroundColor: "#8fb5f8",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  error: {
-    color: "#c62828",
-  },
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  pickerCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 12,
-  },
-  pickerActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  pickerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  pickerButtonText: {
-    fontWeight: "600",
-  },
-  pickerConfirm: {
-    backgroundColor: "#e8f0fe",
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  pickerConfirmText: {
-    color: "#1a73e8",
-  },
-});
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+
+  return StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 12,
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    subtitle: {
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    label: {
+      fontWeight: "600",
+      marginBottom: 4,
+      color: theme.textSecondary,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: theme.card,
+      color: theme.textPrimary,
+    },
+    placeholder: {
+      color: theme.textMuted,
+    },
+    pickerValue: {
+      color: theme.textPrimary,
+    },
+    noteInput: {
+      minHeight: 120,
+      textAlignVertical: "top",
+    },
+    button: {
+      marginTop: 16,
+      backgroundColor: theme.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    buttonDisabled: {
+      backgroundColor: theme.accentSoft,
+    },
+    buttonText: {
+      color: accentForeground,
+      fontWeight: "600",
+    },
+    error: {
+      color: theme.danger,
+    },
+    pickerOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 16,
+    },
+    pickerCard: {
+      width: "100%",
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    pickerActions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    pickerButton: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    pickerButtonText: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    pickerConfirm: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 10,
+      marginLeft: 8,
+    },
+    pickerConfirmText: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+  });
+};
 
 function parseDate(value: string): Date | null {
   if (!value) return null;

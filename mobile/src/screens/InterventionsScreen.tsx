@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -23,6 +23,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../types/navigation";
 import { useActiveResolutions } from "../hooks/useActiveResolutions";
 import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "Interventions">;
 
@@ -45,6 +46,8 @@ export default function InterventionsScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [lastAction, setLastAction] = useState<{ message: string; changes: string[] } | null>(null);
   const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
   const backgroundColor = theme.background;
   const surface = theme.card;
   const borderColor = theme.border;
@@ -226,14 +229,14 @@ export default function InterventionsScreen() {
               <Text style={styles.suggestionTitle}>Agent Suggestion</Text>
               <Text style={styles.suggestionMessage}>{snapshot.card.message}</Text>
               {snapshot.card.options.map((option) => {
-                const theme = getOptionTheme(option.key);
+                const optionTheme = getOptionTheme(option.key, theme);
                 const busy = respondingKey === option.key;
                 return (
                   <TouchableOpacity
                     key={option.key}
                     style={[
                       styles.optionButton,
-                      { backgroundColor: theme.backgroundColor, borderColor: theme.borderColor },
+                      { backgroundColor: optionTheme.backgroundColor, borderColor: optionTheme.borderColor },
                       busy && styles.optionButtonBusy,
                     ]}
                     onPress={() => handleOptionSelect(option.key)}
@@ -242,16 +245,16 @@ export default function InterventionsScreen() {
                   >
                     <View style={styles.optionHeader}>
                       <View style={styles.optionLabelWrapper}>
-                        <Text style={[styles.optionLabel, { color: theme.labelColor }]}>{option.label}</Text>
-                        <Text style={[styles.optionPill, { color: theme.pillColor, backgroundColor: theme.pillBackground }]}>
-                          {theme.pillText}
+                        <Text style={[styles.optionLabel, { color: optionTheme.labelColor }]}>{option.label}</Text>
+                        <Text style={[styles.optionPill, { color: optionTheme.pillColor, backgroundColor: optionTheme.pillBackground }]}>
+                          {optionTheme.pillText}
                         </Text>
                       </View>
-                      {busy ? <ActivityIndicator size="small" color="#1F2933" /> : null}
-                      {!busy ? <ArrowRight size={16} color={theme.iconColor} /> : null}
+                      {busy ? <ActivityIndicator size="small" color={theme.textPrimary} /> : null}
+                      {!busy ? <ArrowRight size={16} color={optionTheme.iconColor} /> : null}
                     </View>
-                    <Text style={[styles.optionDetails, { color: theme.detailColor }]}>{option.details}</Text>
-                    <Text style={[styles.optionCTA, { color: theme.ctaColor }]}>Try this</Text>
+                    <Text style={[styles.optionDetails, { color: optionTheme.detailColor }]}>{option.details}</Text>
+                    <Text style={[styles.optionCTA, { color: optionTheme.ctaColor }]}>Try this</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -273,7 +276,7 @@ export default function InterventionsScreen() {
             onPress={handleGenerate}
             disabled={running}
           >
-            {running ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Generate Check-in</Text>}
+            {running ? <ActivityIndicator color={accentForeground} /> : <Text style={styles.buttonText}>Generate Check-in</Text>}
           </TouchableOpacity>
         </View>
       ) : null}
@@ -284,14 +287,14 @@ export default function InterventionsScreen() {
 function StatusCard({ snapshot }: { snapshot: InterventionSnapshot }) {
   const flagged = snapshot.slippage.flagged;
   const completion = Math.round(snapshot.slippage.completion_rate * 100);
-  const theme = flagged
-    ? { card: styles.warningCard, icon: <ShieldAlert size={42} color="#B45309" />, title: "Slippage detected" }
-    : { card: styles.safeCard, icon: <CheckCircle size={42} color="#15803D" />, title: "On track" };
+  const cardTheme = flagged
+    ? { card: styles.warningCard, icon: <ShieldAlert size={42} color={theme.warning} />, title: "Slippage detected" }
+    : { card: styles.safeCard, icon: <CheckCircle size={42} color={theme.success} />, title: "On track" };
   return (
-    <View style={[styles.statusCard, theme.card]}>
-      {theme.icon}
+    <View style={[styles.statusCard, cardTheme.card]}>
+      {cardTheme.icon}
       <View style={styles.statusContent}>
-        <Text style={styles.statusTitle}>{theme.title}</Text>
+        <Text style={styles.statusTitle}>{cardTheme.title}</Text>
         <Text style={styles.statusMeta}>Completion Rate: {completion}%</Text>
         <Text style={styles.statusMeta}>Missed scheduled: {snapshot.slippage.missed_scheduled}</Text>
       </View>
@@ -311,325 +314,279 @@ type OptionTheme = {
   ctaColor: string;
 };
 
-function getOptionTheme(key: string): OptionTheme {
-  const themes: Record<string, OptionTheme> = {
-    reduce_scope: {
-      backgroundColor: "#FFF7ED",
-      borderColor: "#FDBA74",
-      labelColor: "#9A3412",
-      detailColor: "#7C2D12",
-      iconColor: "#C2410C",
-      pillColor: "#B45309",
-      pillBackground: "#FED7AA",
-      pillText: "Lighten it",
-      ctaColor: "#9A3412",
-    },
-    reschedule: {
-      backgroundColor: "#EFF6FF",
-      borderColor: "#BFDBFE",
-      labelColor: "#1E3A8A",
-      detailColor: "#1E40AF",
-      iconColor: "#2563EB",
-      pillColor: "#1D4ED8",
-      pillBackground: "#DBEAFE",
-      pillText: "Shift it",
-      ctaColor: "#1D4ED8",
-    },
-    reflect: {
-      backgroundColor: "#F0FDF4",
-      borderColor: "#BBF7D0",
-      labelColor: "#166534",
-      detailColor: "#14532D",
-      iconColor: "#15803D",
-      pillColor: "#15803D",
-      pillBackground: "#DCFCE7",
-      pillText: "Reflect",
-      ctaColor: "#166534",
-    },
-    pause: {
-      backgroundColor: "#FDF4FF",
-      borderColor: "#F5D0FE",
-      labelColor: "#86198F",
-      detailColor: "#701A75",
-      iconColor: "#A21CAF",
-      pillColor: "#A21CAF",
-      pillBackground: "#FBE7FF",
-      pillText: "Pause",
-      ctaColor: "#86198F",
-    },
-    adjust_goal: {
-      backgroundColor: "#EEF2FF",
-      borderColor: "#C7D2FE",
-      labelColor: "#3730A3",
-      detailColor: "#312E81",
-      iconColor: "#4C1D95",
-      pillColor: "#4338CA",
-      pillBackground: "#E0E7FF",
-      pillText: "Adjust",
-      ctaColor: "#3730A3",
-    },
-    get_back_on_track: {
-      backgroundColor: "#F0FDFA",
-      borderColor: "#99F6E4",
-      labelColor: "#115E59",
-      detailColor: "#134E4A",
-      iconColor: "#0F766E",
-      pillColor: "#0F766E",
-      pillBackground: "#CCFBF1",
-      pillText: "Recommit",
-      ctaColor: "#115E59",
-    },
+function getOptionTheme(key: string, theme: ThemeTokens): OptionTheme {
+  const palette: Record<
+    string,
+    {
+      color: string;
+      pillText: string;
+    }
+  > = {
+    reduce_scope: { color: theme.warning, pillText: "Lighten it" },
+    reschedule: { color: theme.accent, pillText: "Shift it" },
+    reflect: { color: theme.success, pillText: "Reflect" },
+    pause: { color: theme.danger, pillText: "Pause" },
+    adjust_goal: { color: theme.heroPrimary, pillText: "Adjust" },
+    get_back_on_track: { color: theme.success, pillText: "Recommit" },
   };
 
-  return themes[key] || {
-    backgroundColor: "#F9FAFB",
-    borderColor: "#E5E7EB",
-    labelColor: "#1F2937",
-    detailColor: "#374151",
-    iconColor: "#4B5563",
-    pillColor: "#111827",
-    pillBackground: "#E5E7EB",
-    pillText: "Action",
-    ctaColor: "#1F2937",
+  const variant = palette[key] ?? { color: theme.accent, pillText: "Action" };
+  const surface = theme.mode === "dark" ? theme.surfaceMuted : theme.surface;
+
+  return {
+    backgroundColor: surface,
+    borderColor: theme.border,
+    labelColor: variant.color,
+    detailColor: theme.textSecondary,
+    iconColor: variant.color,
+    pillColor: theme.mode === "dark" ? theme.textPrimary : variant.color,
+    pillBackground: theme.accentSoft,
+    pillText: variant.pillText,
+    ctaColor: variant.color,
   };
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#FAFAF8",
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-    color: "#2D3748",
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  linkButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  linkText: {
-    color: "#6B8DBF",
-    fontWeight: "600",
-  },
-  statusCard: {
-    borderRadius: 24,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  warningCard: {
-    backgroundColor: "#FFF7ED",
-    borderWidth: 1,
-    borderColor: "#FED7AA",
-  },
-  safeCard: {
-    backgroundColor: "#ECFDF5",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-  },
-  statusContent: {
-    flex: 1,
-  },
-  statusTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  statusMeta: {
-    color: "#475467",
-    marginTop: 4,
-  },
-  suggestionCard: {
-    marginTop: 12,
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  suggestionTitle: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  suggestionMessage: {
-    marginTop: 6,
-    color: "#4B5563",
-  },
-  optionButton: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  optionButtonBusy: {
-    opacity: 0.6,
-  },
-  optionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  optionLabelWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  optionLabel: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  optionPill: {
-    fontSize: 11,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    fontWeight: "600",
-  },
-  optionDetails: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  optionCTA: {
-    marginTop: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    fontSize: 12,
-    letterSpacing: 0.6,
-  },
-  button: {
-    marginTop: 16,
-    backgroundColor: "#6B8DBF",
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  buttonDisabled: {
-    backgroundColor: "#A5B8D9",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  helper: {
-    marginTop: 8,
-    color: "#666",
-    textAlign: "center",
-  },
-  actionResult: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
-    backgroundColor: "#EEF2FF",
-  },
-  actionResultTitle: {
-    fontWeight: "700",
-    color: "#312E81",
-  },
-  actionResultCopy: {
-    marginTop: 6,
-    color: "#1E1B4B",
-  },
-  actionResultList: {
-    marginTop: 8,
-    gap: 4,
-  },
-  actionResultItem: {
-    color: "#312E81",
-    fontSize: 13,
-  },
-  actionResultButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 12,
-    flexWrap: "wrap",
-  },
-  secondaryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#94A3B8",
-  },
-  secondaryButtonText: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-  primaryCTA: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#4C1D95",
-  },
-  primaryCTAText: {
-    color: "#FFF",
-    fontWeight: "600",
-  },
-  emptyCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 24,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginTop: 12,
-    color: "#1F2933",
-  },
-  error: {
-    color: "#c62828",
-  },
-  errorBox: {
-    backgroundColor: "#fdecea",
-    borderRadius: 12,
-    padding: 12,
-  },
-  retryButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#c62828",
-  },
-  retryText: {
-    color: "#c62828",
-    fontWeight: "600",
-  },
-  debugBox: {
-    marginTop: 16,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f8",
-  },
-  debugLabel: {
-    fontSize: 12,
-    color: "#555",
-    textAlign: "center",
-  },
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+  const heroForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
+
+  return StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 16,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 28,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+      color: theme.textPrimary,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    linkButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    linkText: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+    statusCard: {
+      borderRadius: 24,
+      padding: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    warningCard: {
+      backgroundColor: theme.mode === "dark" ? "rgba(250,204,21,0.12)" : "rgba(251,191,36,0.25)",
+      borderWidth: 1,
+      borderColor: theme.warning,
+    },
+    safeCard: {
+      backgroundColor: theme.mode === "dark" ? "rgba(34,197,94,0.12)" : "rgba(16,185,129,0.25)",
+      borderWidth: 1,
+      borderColor: theme.success,
+    },
+    statusContent: {
+      flex: 1,
+    },
+    statusTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    statusMeta: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    suggestionCard: {
+      marginTop: 12,
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    suggestionTitle: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    suggestionMessage: {
+      marginTop: 6,
+      color: theme.textSecondary,
+    },
+    optionButton: {
+      marginTop: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    optionButtonBusy: {
+      opacity: 0.6,
+    },
+    optionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+    },
+    optionLabelWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flex: 1,
+    },
+    optionLabel: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    optionPill: {
+      fontSize: 11,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      fontWeight: "600",
+    },
+    optionDetails: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    optionCTA: {
+      marginTop: 10,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      fontSize: 12,
+      letterSpacing: 0.6,
+    },
+    button: {
+      marginTop: 16,
+      backgroundColor: theme.accent,
+      paddingVertical: 14,
+      borderRadius: 999,
+      alignItems: "center",
+      paddingHorizontal: 24,
+    },
+    buttonDisabled: {
+      backgroundColor: theme.accentSoft,
+    },
+    buttonText: {
+      color: accentForeground,
+      fontWeight: "600",
+    },
+    helper: {
+      marginTop: 8,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    actionResult: {
+      marginTop: 16,
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surfaceMuted,
+    },
+    actionResultTitle: {
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    actionResultCopy: {
+      marginTop: 6,
+      color: theme.textSecondary,
+    },
+    actionResultList: {
+      marginTop: 8,
+      gap: 4,
+    },
+    actionResultItem: {
+      color: theme.textSecondary,
+      fontSize: 13,
+    },
+    actionResultButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 10,
+      marginTop: 12,
+      flexWrap: "wrap",
+    },
+    secondaryButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    secondaryButtonText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
+    primaryCTA: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      backgroundColor: theme.heroPrimary,
+    },
+    primaryCTAText: {
+      color: heroForeground,
+      fontWeight: "600",
+    },
+    emptyCard: {
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 24,
+      alignItems: "center",
+      backgroundColor: theme.card,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      marginTop: 12,
+      color: theme.textPrimary,
+    },
+    error: {
+      color: theme.danger,
+    },
+    errorBox: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 12,
+      padding: 12,
+    },
+    retryButton: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.danger,
+    },
+    retryText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+    debugBox: {
+      marginTop: 16,
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: theme.surfaceMuted,
+    },
+    debugLabel: {
+      fontSize: 12,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
 });
+};

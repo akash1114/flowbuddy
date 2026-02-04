@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getInterventionHistoryItem, InterventionSnapshot } from "../api/interventions";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "InterventionsHistoryDetail">;
 
 export default function InterventionsHistoryDetailScreen({ route }: Props) {
   const { logId } = route.params;
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [snapshot, setSnapshot] = useState<InterventionSnapshot | null>(null);
   const [meta, setMeta] = useState<{ created_at: string; week_start: string; week_end: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +43,7 @@ export default function InterventionsHistoryDetailScreen({ route }: Props) {
   if (userLoading || loading || !snapshot || !meta) {
     return (
       <View style={styles.center}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#6B8DBF" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={theme.accent} />}
       </View>
     );
   }
@@ -78,75 +82,76 @@ export default function InterventionsHistoryDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  heroCard: {
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-  },
-  heroAmber: {
-    backgroundColor: "#FFF7ED",
-    borderColor: "#FED7AA",
-  },
-  heroGreen: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
-  },
-  subtitle: {
-    color: "#6B7280",
-    textTransform: "uppercase",
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: 28,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-    marginTop: 8,
-  },
-  helper: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  sectionCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  sectionLabel: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  body: {
-    marginTop: 6,
-    color: "#475569",
-  },
-  optionRow: {
-    marginTop: 12,
-  },
-  optionLabel: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  optionDetails: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  error: {
-    color: "#c62828",
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 16,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      backgroundColor: theme.background,
+    },
+    heroCard: {
+      borderRadius: 24,
+      padding: 24,
+      borderWidth: 1,
+    },
+    heroAmber: {
+      backgroundColor: "rgba(254,215,170,0.35)",
+      borderColor: "rgba(254,215,170,0.8)",
+    },
+    heroGreen: {
+      backgroundColor: "rgba(187,247,208,0.35)",
+      borderColor: "rgba(187,247,208,0.8)",
+    },
+    subtitle: {
+      color: theme.textMuted,
+      textTransform: "uppercase",
+      fontSize: 12,
+      letterSpacing: 1,
+    },
+    title: {
+      fontSize: 28,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+      marginTop: 8,
+    },
+    helper: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    sectionCard: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    sectionLabel: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    body: {
+      marginTop: 6,
+      color: theme.textSecondary,
+    },
+    optionRow: {
+      marginTop: 12,
+    },
+    optionLabel: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    optionDetails: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    error: {
+      color: theme.danger,
+    },
+  });

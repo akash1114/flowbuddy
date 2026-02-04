@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { Brain, CheckCircle, Tag, Quote, User } from "lucide-react-native";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 import { getAgentLogItem, AgentLogDetail } from "../api/agentLog";
 import { useUserId } from "../state/user";
@@ -14,6 +16,8 @@ export default function AgentLogDetailScreen() {
   const route = useRoute<Route>();
   const { logId } = route.params;
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [entry, setEntry] = useState<AgentLogDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,7 @@ export default function AgentLogDetailScreen() {
   if (userLoading || loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#6B8DBF" />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Loading log entry…</Text>
       </View>
     );
@@ -86,7 +90,7 @@ export default function AgentLogDetailScreen() {
       <ScrollView contentContainerStyle={styles.brainContainer} stickyHeaderIndices={[]}>
         <View style={styles.brainHeader}>
           <View style={styles.brainIconWrapper}>
-            <Brain size={42} color="#4338CA" />
+            <Brain size={42} color={theme.accent} />
           </View>
           <View>
             <Text style={styles.brainLabel}>Mental Clear</Text>
@@ -97,7 +101,7 @@ export default function AgentLogDetailScreen() {
         {userText ? (
           <View style={styles.userCard}>
             <View style={styles.userHeader}>
-              <User size={18} color="#475569" />
+              <User size={18} color={theme.textSecondary} />
               <Text style={styles.userLabel}>You wrote</Text>
             </View>
             <Text style={styles.userText}>{userText}</Text>
@@ -105,7 +109,7 @@ export default function AgentLogDetailScreen() {
         ) : null}
 
         <View style={styles.brainHero}>
-          <Quote size={26} color="#3730A3" />
+          <Quote size={26} color={theme.heroPrimary} />
           <Text style={styles.brainQuote}>"{acknowledgement}"</Text>
           <Text style={styles.brainSentiment}>Sentiment score: {sentiment.toFixed(2)}</Text>
         </View>
@@ -116,7 +120,7 @@ export default function AgentLogDetailScreen() {
             <View style={styles.pillRow}>
               {emotions.map((emotion) => (
                 <View key={emotion} style={styles.pill}>
-                  <Tag size={14} color="#4C1D95" />
+                  <Tag size={14} color={theme.accent} />
                   <Text style={styles.pillText}>{emotion}</Text>
                 </View>
               ))}
@@ -129,7 +133,7 @@ export default function AgentLogDetailScreen() {
             <Text style={styles.sectionLabel}>Suggested Actions</Text>
             {actionableItems.map((item) => (
               <View key={item} style={styles.actionRow}>
-                <CheckCircle size={18} color="#047857" />
+                <CheckCircle size={18} color={theme.success} />
                 <Text style={styles.actionText}>{item}</Text>
               </View>
             ))}
@@ -155,7 +159,7 @@ export default function AgentLogDetailScreen() {
 
       <View style={styles.summaryCard}>
         <Text style={styles.summary}>{entry.summary}</Text>
-        <Text style={[styles.badge, styles.badgeBlue]}>{entry.action_type}</Text>
+        <Text style={[styles.badge, styles.badgePrimary]}>{entry.action_type}</Text>
       </View>
 
       <View style={styles.metaCard}>
@@ -184,226 +188,229 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  helper: {
-    marginTop: 8,
-    color: "#666",
-    textAlign: "center",
-  },
-  error: {
-    color: "#c62828",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#c62828",
-  },
-  retryText: {
-    color: "#c62828",
-    fontWeight: "600",
-  },
-  header: {
-    gap: 4,
-  },
-  headerLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: "#6B7280",
-  },
-  timestamp: {
-    fontSize: 22,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  summaryCard: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    gap: 10,
-  },
-  summary: {
-    fontSize: 20,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  badge: {
-    alignSelf: "flex-start",
-    fontSize: 12,
-    textTransform: "uppercase",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: "600",
-  },
-  badgeBlue: {
-    backgroundColor: "#DBEAFE",
-    color: "#1D4ED8",
-  },
-  metaCard: {
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    gap: 8,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111",
-    flex: 1,
-    textAlign: "right",
-  },
-  payloadBox: {
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 16,
-  },
-  payloadLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#4B5563",
-    marginBottom: 8,
-  },
-  payloadText: {
-    fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
-    fontSize: 12,
-    color: "#111",
-    minWidth: 250,
-  },
-  brainContainer: {
-    padding: 24,
-    gap: 24,
-    backgroundColor: "#F5F3FF",
-  },
-  brainHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  brainIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#E0E7FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brainLabel: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#312E81",
-  },
-  brainTimestamp: {
-    color: "#4338CA",
-  },
-  brainHero: {
-    backgroundColor: "#EEF2FF",
-    borderRadius: 24,
-    padding: 24,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-  brainQuote: {
-    fontSize: 22,
-    fontStyle: "italic",
-    color: "#312E81",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  brainSentiment: {
-    color: "#4C1D95",
-    fontWeight: "600",
-  },
-  brainSection: {
-    gap: 12,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#312E81",
-  },
-  pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#DDD6FE",
-  },
-  pillText: {
-    color: "#4C1D95",
-    fontWeight: "600",
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 4,
-  },
-  actionText: {
-    color: "#065F46",
-    fontWeight: "600",
-  },
-  userCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: 8,
-  },
-  userHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  userLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#475569",
-    textTransform: "uppercase",
-  },
-  userText: {
-    fontSize: 16,
-    color: "#1F2937",
-    lineHeight: 24,
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 16,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      backgroundColor: theme.background,
+    },
+    helper: {
+      marginTop: 8,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    error: {
+      color: theme.danger,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    retryButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.danger,
+    },
+    retryText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+    header: {
+      gap: 4,
+    },
+    headerLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      color: theme.textMuted,
+    },
+    timestamp: {
+      fontSize: 22,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    summaryCard: {
+      backgroundColor: theme.card,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      gap: 10,
+    },
+    summary: {
+      fontSize: 20,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    badge: {
+      alignSelf: "flex-start",
+      fontSize: 12,
+      textTransform: "uppercase",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      fontWeight: "600",
+    },
+    badgePrimary: {
+      backgroundColor: theme.accentSoft,
+      color: theme.accent,
+    },
+    metaCard: {
+      borderRadius: 16,
+      backgroundColor: theme.card,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      gap: 8,
+    },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: theme.textSecondary,
+    },
+    infoValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.textPrimary,
+      flex: 1,
+      textAlign: "right",
+    },
+    payloadBox: {
+      borderRadius: 16,
+      backgroundColor: theme.surfaceMuted,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+    },
+    payloadLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.textSecondary,
+      marginBottom: 8,
+    },
+    payloadText: {
+      fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
+      fontSize: 12,
+      color: theme.textPrimary,
+      minWidth: 250,
+    },
+    brainContainer: {
+      padding: 24,
+      gap: 24,
+      backgroundColor: theme.surfaceMuted,
+    },
+    brainHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    brainIconWrapper: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: theme.surface,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    brainLabel: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    brainTimestamp: {
+      color: theme.accent,
+    },
+    brainHero: {
+      backgroundColor: theme.card,
+      borderRadius: 24,
+      padding: 24,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    brainQuote: {
+      fontSize: 22,
+      fontStyle: "italic",
+      color: theme.heroPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    brainSentiment: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+    brainSection: {
+      gap: 12,
+    },
+    sectionLabel: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.textPrimary,
+    },
+    pillRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    pill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.chipBackground,
+    },
+    pillText: {
+      color: theme.chipText,
+      fontWeight: "600",
+    },
+    actionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: 4,
+    },
+    actionText: {
+      color: theme.success,
+      fontWeight: "600",
+    },
+    userCard: {
+      backgroundColor: theme.card,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      gap: 8,
+    },
+    userHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    userLabel: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.textSecondary,
+      textTransform: "uppercase",
+    },
+    userText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+      lineHeight: 24,
+    },
+  });

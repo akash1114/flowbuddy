@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,6 +17,8 @@ import { listAgentLog, AgentLogListItem } from "../api/agentLog";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
 import { Brain, Target, ShieldAlert, FileText } from "lucide-react-native";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "AgentLog">;
 
@@ -30,6 +32,8 @@ const FILTER_CHIPS = [
 export default function AgentLogScreen() {
   const navigation = useNavigation<Nav>();
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [entries, setEntries] = useState<AgentLogListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,11 +102,55 @@ export default function AgentLogScreen() {
   if (userLoading || ((loading || isFiltering) && !entries.length)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#6B8DBF" />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Loading agent log…</Text>
       </View>
     );
   }
+
+  const renderIcon = (actionType: string) => {
+    const lower = actionType.toLowerCase();
+    if (lower.includes("brain_dump")) {
+      return (
+        <View style={[styles.iconCircle, styles.iconAccent]}>
+          <Brain size={18} color={theme.accent} />
+        </View>
+      );
+    }
+    if (lower.includes("resolution")) {
+      return (
+        <View style={[styles.iconCircle, styles.iconInfo]}>
+          <Target size={18} color={theme.accent} />
+        </View>
+      );
+    }
+    if (lower.includes("intervention")) {
+      return (
+        <View style={[styles.iconCircle, styles.iconWarning]}>
+          <ShieldAlert size={18} color={theme.warning} />
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.iconCircle, styles.iconNeutral]}>
+        <FileText size={18} color={theme.textSecondary} />
+      </View>
+    );
+  };
+
+  const getBadgeTheme = (actionType: string) => {
+    const lower = actionType.toLowerCase();
+    if (lower.includes("brain_dump")) {
+      return { backgroundColor: theme.accentSoft, color: theme.accent };
+    }
+    if (lower.includes("resolution")) {
+      return { backgroundColor: theme.surfaceMuted, color: theme.textPrimary };
+    }
+    if (lower.includes("intervention")) {
+      return { backgroundColor: "rgba(250,204,21,0.2)", color: theme.warning };
+    }
+    return { backgroundColor: theme.surface, color: theme.textSecondary };
+  };
 
   return (
     <FlatList
@@ -157,7 +205,7 @@ export default function AgentLogScreen() {
           <View style={[styles.card, isBrainDump(item.action_type) && styles.brainCard]}>
             <Text style={styles.summary}>{item.summary}</Text>
             <View style={styles.metaRow}>
-              <Text style={[styles.badge, getBadgeStyle(item.action_type)]}>{item.action_type}</Text>
+              <Text style={[styles.badge, getBadgeTheme(item.action_type)]}>{item.action_type}</Text>
               <Text style={styles.timestamp}>{new Date(item.created_at).toLocaleString()}</Text>
             </View>
             {item.request_id ? <Text style={styles.requestId}>request_id: {item.request_id}</Text> : null}
@@ -173,222 +221,175 @@ function isBrainDump(actionType: string) {
   return actionType.toLowerCase().includes("brain_dump");
 }
 
-function renderIcon(actionType: string) {
-  const lower = actionType.toLowerCase();
-  if (lower.includes("brain_dump")) {
-    return (
-      <View style={[styles.iconCircle, styles.iconPurple]}>
-        <Brain size={18} color="#7C3AED" />
-      </View>
-    );
-  }
-  if (lower.includes("resolution")) {
-    return (
-      <View style={[styles.iconCircle, styles.iconBlue]}>
-        <Target size={18} color="#2563EB" />
-      </View>
-    );
-  }
-  if (lower.includes("intervention")) {
-    return (
-      <View style={[styles.iconCircle, styles.iconAmber]}>
-        <ShieldAlert size={18} color="#B45309" />
-      </View>
-    );
-  }
-  return (
-    <View style={[styles.iconCircle, styles.iconGray]}>
-      <FileText size={18} color="#475569" />
-    </View>
-  );
-}
+const createStyles = (theme: ThemeTokens) => {
+  const accentForeground = theme.mode === "dark" ? theme.textPrimary : "#fff";
 
-function getBadgeStyle(actionType: string) {
-  const lower = actionType.toLowerCase();
-  if (lower.includes("brain_dump")) return styles.badgePurple;
-  if (lower.includes("resolution")) return styles.badgeBlue;
-  if (lower.includes("intervention")) return styles.badgeAmber;
-  return styles.badgeGray;
-}
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FAFAF8",
-  },
-  helper: {
-    marginTop: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  listContent: {
-    padding: 16,
-    gap: 12,
-    backgroundColor: "#FAFAF8",
-  },
-  header: {
-    marginBottom: 12,
-    gap: 8,
-  },
-  title: {
-    fontSize: 30,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  subtitle: {
-    color: "#555",
-  },
-  filterRow: {
-    gap: 8,
-    paddingVertical: 8,
-    paddingRight: 12,
-  },
-  filterChip: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#E5E7EB",
-  },
-  filterChipActive: {
-    backgroundColor: "#2D3748",
-  },
-  filterText: {
-    color: "#4B5563",
-    fontWeight: "600",
-  },
-  filterTextActive: {
-    color: "#fff",
-  },
-  errorBox: {
-    backgroundColor: "#fdecea",
-    borderRadius: 12,
-    padding: 12,
-  },
-  error: {
-    color: "#c62828",
-  },
-  retryButton: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#c62828",
-    borderRadius: 8,
-  },
-  retryText: {
-    color: "#c62828",
-    fontWeight: "600",
-  },
-  timelineRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  iconColumn: {
-    width: 40,
-    alignItems: "center",
-  },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconPurple: {
-    backgroundColor: "#F3EEFF",
-  },
-  iconBlue: {
-    backgroundColor: "#E0ECFF",
-  },
-  iconAmber: {
-    backgroundColor: "#FEF3C7",
-  },
-  iconGray: {
-    backgroundColor: "#E2E8F0",
-  },
-  card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0e5f2",
-    padding: 14,
-    backgroundColor: "#fff",
-    gap: 6,
-    flex: 1,
-    marginLeft: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  brainCard: {
-    backgroundColor: "#F8F7FC",
-    borderColor: "#E9E5FF",
-  },
-  summary: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111",
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  badge: {
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontWeight: "600",
-  },
-  badgePurple: {
-    backgroundColor: "#EEE5FF",
-    color: "#6D28D9",
-  },
-  badgeBlue: {
-    backgroundColor: "#DBEAFE",
-    color: "#1D4ED8",
-  },
-  badgeAmber: {
-    backgroundColor: "#FEF3C7",
-    color: "#B45309",
-  },
-  badgeGray: {
-    backgroundColor: "#E5E7EB",
-    color: "#4B5563",
-  },
-  timestamp: {
-    fontSize: 12,
-    color: "#666",
-  },
-  requestId: {
-    fontSize: 12,
-    color: "#555",
-  },
-  undo: {
-    fontSize: 12,
-    color: "#0b9444",
-    fontWeight: "600",
-  },
-  loadMoreButton: {
-    marginTop: 12,
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#6B8DBF",
-  },
-  loadMoreText: {
-    color: "#6B8DBF",
-    fontWeight: "600",
-  },
-  footerGap: {
-    height: 40,
-  },
-});
+  return StyleSheet.create({
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+      padding: 24,
+    },
+    helper: {
+      marginTop: 12,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    listContent: {
+      padding: 16,
+      gap: 12,
+      backgroundColor: theme.background,
+    },
+    header: {
+      marginBottom: 12,
+      gap: 8,
+    },
+    title: {
+      fontSize: 30,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    subtitle: {
+      color: theme.textSecondary,
+    },
+    filterRow: {
+      gap: 8,
+      paddingVertical: 8,
+      paddingRight: 12,
+    },
+    filterChip: {
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    filterChipActive: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    filterText: {
+      color: theme.textSecondary,
+      fontWeight: "600",
+    },
+    filterTextActive: {
+      color: accentForeground,
+    },
+    errorBox: {
+      backgroundColor: theme.accentSoft,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+    },
+    error: {
+      color: theme.danger,
+    },
+    retryButton: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: theme.danger,
+      borderRadius: 8,
+    },
+    retryText: {
+      color: theme.danger,
+      fontWeight: "600",
+    },
+    timelineRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    iconColumn: {
+      width: 40,
+      alignItems: "center",
+    },
+    iconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconAccent: {
+      backgroundColor: theme.accentSoft,
+    },
+    iconInfo: {
+      backgroundColor: theme.surfaceMuted,
+    },
+    iconWarning: {
+      backgroundColor: "rgba(250,204,21,0.18)",
+    },
+    iconNeutral: {
+      backgroundColor: theme.surface,
+    },
+    card: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      backgroundColor: theme.card,
+      gap: 6,
+      flex: 1,
+      marginLeft: 12,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    brainCard: {
+      backgroundColor: theme.surfaceMuted,
+    },
+    summary: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    metaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    badge: {
+      fontSize: 10,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      fontWeight: "600",
+    },
+    timestamp: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    requestId: {
+      fontSize: 12,
+      color: theme.textSecondary,
+    },
+    undo: {
+      fontSize: 12,
+      color: theme.success,
+      fontWeight: "600",
+    },
+    loadMoreButton: {
+      marginTop: 12,
+      alignSelf: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.accent,
+    },
+    loadMoreText: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+    footerGap: {
+      height: 40,
+    },
+  });
+};

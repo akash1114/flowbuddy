@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { listResolutions, ResolutionSummary } from "../api/resolutions";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "DraftPlans">;
 
 export default function ResolutionsListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [resolutions, setResolutions] = useState<ResolutionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +60,7 @@ export default function ResolutionsListScreen() {
   if (userLoading || loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Fetching your draft plans…</Text>
       </View>
     );
@@ -98,65 +102,72 @@ export default function ResolutionsListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-  },
-  card: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e1e5ee",
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  meta: {
-    color: "#555",
-    marginTop: 4,
-  },
-  updated: {
-    marginTop: 6,
-    color: "#888",
-    fontSize: 12,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  helper: {
-    marginTop: 8,
-    color: "#666",
-    textAlign: "center",
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#111",
-  },
-  error: {
-    color: "#c62828",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  retry: {
-    marginTop: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#1a73e8",
-  },
-  retryText: {
-    color: "#1a73e8",
-    fontWeight: "600",
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    listContent: {
+      padding: 16,
+    },
+    card: {
+      padding: 16,
+      borderRadius: 12,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.04,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    meta: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    updated: {
+      marginTop: 6,
+      color: theme.textMuted,
+      fontSize: 12,
+    },
+    center: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      backgroundColor: theme.background,
+    },
+    helper: {
+      marginTop: 8,
+      color: theme.textSecondary,
+      textAlign: "center",
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    error: {
+      color: theme.danger,
+      fontSize: 16,
+      textAlign: "center",
+    },
+    retry: {
+      marginTop: 12,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.accent,
+    },
+    retryText: {
+      color: theme.accent,
+      fontWeight: "600",
+    },
+  });

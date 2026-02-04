@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { getWeeklyPlanHistoryItem, WeeklyPlanResponse } from "../api/weeklyPlan";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "WeeklyPlanHistoryDetail">;
 
 export default function WeeklyPlanHistoryDetailScreen({ route }: Props) {
   const { logId } = route.params;
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [snapshot, setSnapshot] = useState<WeeklyPlanResponse | null>(null);
   const [meta, setMeta] = useState<{ created_at: string; week_start: string; week_end: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,7 @@ export default function WeeklyPlanHistoryDetailScreen({ route }: Props) {
   if (userLoading || loading || !snapshot || !meta) {
     return (
       <View style={styles.center}>
-        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color="#6B8DBF" />}
+        {error ? <Text style={styles.error}>{error}</Text> : <ActivityIndicator color={theme.accent} />}
       </View>
     );
   }
@@ -74,82 +78,83 @@ export default function WeeklyPlanHistoryDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 16,
-    backgroundColor: "#FAFAF8",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FAFAF8",
-  },
-  heroCard: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    gap: 8,
-  },
-  subtitle: {
-    color: "#6B7280",
-    textTransform: "uppercase",
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: 28,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  helper: {
-    color: "#6B7280",
-    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
-  },
-  focusCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  sectionLabel: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  body: {
-    marginTop: 6,
-    color: "#475569",
-    fontStyle: "italic",
-  },
-  sectionHeader: {
-    marginTop: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  taskRow: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    marginBottom: 8,
-  },
-  taskTitle: {
-    fontWeight: "600",
-    color: "#1F2933",
-  },
-  taskMeta: {
-    color: "#6B7280",
-    marginTop: 4,
-  },
-  error: {
-    color: "#c62828",
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    container: {
+      padding: 20,
+      gap: 16,
+      backgroundColor: theme.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+    },
+    heroCard: {
+      backgroundColor: theme.card,
+      borderRadius: 24,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: theme.border,
+      gap: 8,
+    },
+    subtitle: {
+      color: theme.textMuted,
+      textTransform: "uppercase",
+      fontSize: 12,
+      letterSpacing: 1,
+    },
+    title: {
+      fontSize: 28,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    helper: {
+      color: theme.textSecondary,
+      fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    },
+    focusCard: {
+      backgroundColor: theme.card,
+      borderRadius: 20,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    sectionLabel: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    body: {
+      marginTop: 6,
+      color: theme.textSecondary,
+      fontStyle: "italic",
+    },
+    sectionHeader: {
+      marginTop: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    taskRow: {
+      backgroundColor: theme.card,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginBottom: 8,
+    },
+    taskTitle: {
+      fontWeight: "600",
+      color: theme.textPrimary,
+    },
+    taskMeta: {
+      color: theme.textSecondary,
+      marginTop: 4,
+    },
+    error: {
+      color: theme.danger,
+    },
+  });

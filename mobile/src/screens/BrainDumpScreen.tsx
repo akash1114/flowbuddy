@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -18,6 +18,8 @@ import { submitBrainDump, BrainDumpResponse } from "../api/brainDump";
 import { useUserId } from "../state/user";
 import type { RootStackParamList } from "../../types/navigation";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTheme } from "../theme";
+import type { ThemeTokens } from "../theme";
 
 const MAX_LENGTH = 2000;
 
@@ -35,6 +37,8 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 export default function BrainDumpScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId, loading: userLoading } = useUserId();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +89,22 @@ export default function BrainDumpScreen() {
   if (userLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={theme.accent} />
         <Text style={styles.helper}>Preparing your workspace…</Text>
       </View>
     );
   }
+
+  const renderPill = (value: string | null, type: "emotion" | "topic") => {
+    if (!value) return null;
+    const pillStyle = type === "emotion" ? styles.emotionPill : styles.topicPill;
+    const textStyle = type === "emotion" ? styles.emotionPillText : styles.topicPillText;
+    return (
+      <View key={`${type}-${value}`} style={pillStyle}>
+        <Text style={textStyle}>{value}</Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.screen}>
@@ -104,7 +119,7 @@ export default function BrainDumpScreen() {
                 multiline
                 maxLength={MAX_LENGTH}
                 placeholder="I’m feeling stuck because..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={theme.textMuted}
                 value={text}
                 onChangeText={setText}
                 textAlignVertical="top"
@@ -115,8 +130,16 @@ export default function BrainDumpScreen() {
               </Text>
             </View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            <TouchableOpacity style={[styles.button, !canSubmit && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Analyze Signal</Text>}
+            <TouchableOpacity
+              style={[styles.button, !canSubmit && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.mode === "dark" ? theme.textPrimary : "#fff"} />
+              ) : (
+                <Text style={styles.buttonText}>Analyze Signal</Text>
+              )}
             </TouchableOpacity>
           </>
         ) : null}
@@ -151,8 +174,8 @@ export default function BrainDumpScreen() {
             <Text style={styles.acknowledgement}>"{result.response.acknowledgement}"</Text>
             <Text style={styles.sentiment}>Sentiment: {result.response.signals.sentiment_score.toFixed(2)}</Text>
             <View style={styles.pillGroup}>
-              {result.response.signals.emotions.map((emotion) => renderPill(emotion, "#E0ECFF", "#1D4ED8"))}
-              {result.response.signals.topics.map((topic) => renderPill(topic, "#DCFCE7", "#15803D"))}
+              {result.response.signals.emotions.map((emotion) => renderPill(emotion, "emotion"))}
+              {result.response.signals.topics.map((topic) => renderPill(topic, "topic"))}
             </View>
 
             <View style={styles.actionArea}>
@@ -188,10 +211,7 @@ export default function BrainDumpScreen() {
                     <CheckCircle2 color="#4B5563" size={20} />
                     <Text style={styles.nonActionableText}>Signals captured. No tasks added.</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.button, styles.dismissButton]}
-                    onPress={() => navigation.navigate("Home")}
-                  >
+                  <TouchableOpacity style={[styles.button, styles.dismissButton]} onPress={() => navigation.navigate("Home")}>
                     <Text style={styles.buttonText}>Done</Text>
                   </TouchableOpacity>
                 </>
@@ -204,160 +224,177 @@ export default function BrainDumpScreen() {
   );
 }
 
-function renderPill(value: string | null, bg: string, color: string) {
-  if (!value) return null;
-  return (
-    <View key={value} style={[styles.pill, { backgroundColor: bg }]}>
-      <Text style={[styles.pillText, { color }]}>{value}</Text>
-    </View>
-  );
-}
+const createStyles = (theme: ThemeTokens) => {
+  const buttonTextColor = theme.mode === "dark" ? theme.textPrimary : "#fff";
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#FAFAF8",
-  },
-  container: {
-    padding: 24,
-    gap: 16,
-  },
-  title: {
-    fontSize: 26,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  helper: {
-    color: "#6B7280",
-    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
-  },
-  inputWrapper: {
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  input: {
-    minHeight: 180,
-    fontSize: 18,
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
-  },
-  counter: {
-    alignSelf: "flex-end",
-    color: "#94A3B8",
-    marginTop: 8,
-    fontSize: 12,
-  },
-  button: {
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: "center",
-    backgroundColor: "#6B8DBF",
-  },
-  buttonDisabled: {
-    backgroundColor: "#A5B8D9",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  error: {
-    color: "#B91C1C",
-    marginTop: 8,
-  },
-  processing: {
-    alignItems: "center",
-    marginTop: 40,
-  },
-  pulse: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#E0ECFF",
-  },
-  processingText: {
-    marginTop: 16,
-    color: "#6B7280",
-    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
-  },
-  analysisCard: {
-    marginTop: 20,
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 20,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  acknowledgement: {
-    fontSize: 22,
-    fontStyle: "italic",
-    color: "#2D3748",
-    fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
-  },
-  sentiment: {
-    color: "#4B5563",
-  },
-  pillGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  pillText: {
-    fontWeight: "600",
-  },
-  actionArea: {
-    marginTop: 8,
-    gap: 12,
-  },
-  actionableText: {
-    color: "#4B5563",
-    fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
-  },
-  suggestedAction: {
-    color: "#111827",
-    fontWeight: "600",
-  },
-  actionButtons: {
-    gap: 8,
-  },
-  primaryAction: {
-    backgroundColor: "#3B82F6",
-  },
-  secondaryAction: {
-    backgroundColor: "#E5E7EB",
-  },
-  secondaryActionText: {
-    color: "#1F2937",
-  },
-  dismissButton: {
-    backgroundColor: "#9DB8A0",
-  },
-  nonActionable: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  nonActionableText: {
-    color: "#4B5563",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      padding: 24,
+      gap: 16,
+    },
+    title: {
+      fontSize: 26,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    helper: {
+      color: theme.textSecondary,
+      fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    },
+    inputWrapper: {
+      padding: 16,
+      borderRadius: 20,
+      backgroundColor: theme.card,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    input: {
+      minHeight: 180,
+      fontSize: 18,
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    },
+    counter: {
+      alignSelf: "flex-end",
+      color: theme.textMuted,
+      marginTop: 8,
+      fontSize: 12,
+    },
+    button: {
+      marginTop: 16,
+      paddingVertical: 14,
+      borderRadius: 999,
+      alignItems: "center",
+      backgroundColor: theme.accent,
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
+    },
+    buttonDisabled: {
+      backgroundColor: theme.accentSoft,
+    },
+    buttonText: {
+      color: buttonTextColor,
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    error: {
+      color: theme.danger,
+      marginTop: 8,
+    },
+    processing: {
+      alignItems: "center",
+      marginTop: 40,
+    },
+    pulse: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: theme.accentSoft,
+    },
+    processingText: {
+      marginTop: 16,
+      color: theme.textSecondary,
+      fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    },
+    analysisCard: {
+      marginTop: 20,
+      backgroundColor: theme.card,
+      borderRadius: 24,
+      padding: 20,
+      gap: 12,
+      shadowColor: theme.shadow,
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 8 },
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    acknowledgement: {
+      fontSize: 22,
+      fontStyle: "italic",
+      color: theme.textPrimary,
+      fontFamily: Platform.select({ ios: "Georgia", default: "serif" }),
+    },
+    sentiment: {
+      color: theme.textSecondary,
+    },
+    pillGroup: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 12,
+    },
+    emotionPill: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.accentSoft,
+    },
+    emotionPillText: {
+      fontWeight: "600",
+      color: theme.accent,
+    },
+    topicPill: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.chipBackground,
+    },
+    topicPillText: {
+      fontWeight: "600",
+      color: theme.chipText,
+    },
+    actionArea: {
+      marginTop: 8,
+      gap: 12,
+    },
+    actionableText: {
+      color: theme.textSecondary,
+      fontFamily: Platform.select({ ios: "System", default: "sans-serif" }),
+    },
+    suggestedAction: {
+      color: theme.textPrimary,
+      fontWeight: "600",
+    },
+    actionButtons: {
+      gap: 8,
+    },
+    primaryAction: {
+      backgroundColor: theme.success,
+    },
+    secondaryAction: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    secondaryActionText: {
+      color: theme.textPrimary,
+    },
+    dismissButton: {
+      backgroundColor: theme.accent,
+    },
+    nonActionable: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    nonActionableText: {
+      color: theme.textSecondary,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.background,
+    },
+  });
+};
