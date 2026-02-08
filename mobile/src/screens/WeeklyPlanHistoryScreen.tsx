@@ -65,7 +65,7 @@ export default function WeeklyPlanHistoryScreen() {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchHistory(); }} />}
     >
-      <Text style={styles.title}>Plan Archive</Text>
+      <Text style={styles.title}>Blueprint Archive</Text>
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.error}>{error}</Text>

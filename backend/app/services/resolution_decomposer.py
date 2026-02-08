@@ -131,31 +131,37 @@ SPECIALTY_CONFIG: Dict[str, Dict[str, Any]] = {
         "keywords": {"run", "running", "cardio", "workout", "gym", "yoga", "strength", "training"},
         "prompt_hint": (
             "### DOMAIN FOCUS: FITNESS\n"
-            "- Schedule two anchor workouts that last close to the target duration (e.g., 30-minute run/walk intervals) and spread recovery/activation days between them.\n"
-            "- Keep prep/setup tasks under 15 minutes and limit them to one slot so most of the time is spent on movement.\n"
-            "- Name the precise drills (e.g., \"5x(2 min run / 1 min walk)\", \"90/90 hip switches\") and describe how to log effort.\n"
-            "- Always include `count` or `times_per_week` inside each `cadence` object so scheduling can spread sessions across the entire week."
+            "- Provide two anchor workouts with explicit drills and at least one recovery session.\n"
+            "- Keep setup tasks under 10 minutes and limit them to Week 1.\n"
+            "- Always include `x_per_week` cadence counts so scheduling spreads effort across the week."
         ),
         "tasks": [
             {
-                "title": "Stage running kit",
-                "intent": "Signal commitment by staging shoes, clothes, bottle, and timer.",
-                "note": "Lay everything out near the door so mornings stay effortless.",
+                "title": "Stage gym gear + tracker",
+                "intent": "Remove friction by prepping outfit, shoes, and your logging tool.",
+                "note": "Keep this under 10 minutes so energy goes to the workouts.",
                 "duration": 10,
-                "cadence": "flex",
+                "cadence": "one_time",
             },
             {
-                "title": "Run-walk interval: 30 minutes",
-                "intent": "Introduce running with structured intervals to hit the target duration.",
-                "note": "Alternate 2 min run / 1 min walk for 10 rounds; note effort 1-10.",
+                "title": "3x(2 min run / 1 min walk)",
+                "intent": "Build aerobic base via structured intervals; log effort 1-10 after each session.",
+                "note": "Stay conversational pace and jot one line about energy post-run.",
+                "duration": 30,
+                "cadence": {"type": "x_per_week", "count": 3, "times": ["morning"]},
+            },
+            {
+                "title": "Full-body strength circuit",
+                "intent": "Alternate squats, pushups, and rows to build strength.",
+                "note": "Example: 3 rounds of 12 squats, 10 pushups, 12 rows with 60 sec rest.",
                 "duration": 30,
                 "cadence": {"type": "x_per_week", "count": 2, "times": ["morning"]},
             },
             {
-                "title": "Mobility + strides",
-                "intent": "Keep joints healthy and reinforce running form on non-run days.",
-                "note": "10 min mobility (90/90 switches) plus 4 x 20-second strides.",
-                "duration": 20,
+                "title": "Mobility + core flow",
+                "intent": "Encourage recovery with mobility work and light core activation.",
+                "note": "10 min mobility (90/90, cat-cow) + 5 min plank / dead bug variations.",
+                "duration": 15,
                 "cadence": {"type": "x_per_week", "count": 2, "times": ["morning"]},
             },
         ],
@@ -714,7 +720,8 @@ def _build_prompts(
         "Users fail because Week 1 is too hard. Your job is to remove friction.\n"
         "- **Task 1 MUST be 'Environment Design':** (e.g., 'Set up desk', 'Buy shoes', 'Download app').\n"
         "- **NO 'Vague' Verbs:** Ban words like 'Study', 'Work on', 'Try'. Use binary verbs: 'Write', 'Read', 'Run', 'Commit'.\n"
-        "- **Success Signal:** Every task must have a clear 'Done' state.\n\n"
+        "- **Success Signal:** Every task must have a clear 'Done' state.\n"
+        "- **Week 1 Specificity:** Provide distinct, concrete drill names (e.g., '3x(10 reps goblet squat)') so the user knows exactly what to do each session. Do not repeat the same task title more than once.\n\n"
 
         "### STEP 3: SCHEDULING RULES\n"
         "- **Cadence:** Use the 'cadence' object strictly. For habits, prefer 'daily' or 'x_per_week' (min 3).\n"
@@ -758,7 +765,13 @@ def _generate_plan_via_llm(
     content = completion.choices[0].message.content or "{}"
     plan = ResolutionPlan.model_validate_json(content)
     plan_dict = plan.model_dump()
-    return _post_process_plan(plan_dict, resolution_type, user_context, target_weeks)
+    return _post_process_plan(
+        plan_dict,
+        resolution_type,
+        user_context,
+        target_weeks,
+        trace_metadata.get("domain", "personal"),
+    )
 
 
 def _repair_plan_via_llm(
@@ -791,7 +804,13 @@ def _repair_plan_via_llm(
         content = completion.choices[0].message.content or "{}"
         plan = ResolutionPlan.model_validate_json(content)
         plan_dict = plan.model_dump()
-        return _post_process_plan(plan_dict, resolution_type, user_context, target_weeks)
+        return _post_process_plan(
+            plan_dict,
+            resolution_type,
+            user_context,
+            target_weeks,
+            trace_metadata.get("domain", "personal"),
+        )
     except Exception:  # pragma: no cover - defensive
         return None
 
@@ -836,18 +855,20 @@ def _post_process_plan(
     resolution_type: Optional[str],
     user_context: Optional[Dict[str, Any]],
     target_weeks: Optional[int] = None,
+    resolution_domain: str = "personal",
 ) -> Dict[str, Any]:
     normalized_week_one = _prepare_week_one_tasks(
         plan_dict.get("week_1_tasks", []),
         resolution_type,
         plan_dict.get("resolution_title"),
+        resolution_domain,
     )
     plan_dict["week_1_tasks"] = normalized_week_one
     enriched_week1 = _enrich_tasks_with_schedule(
         normalized_week_one,
         resolution_type,
         user_context,
-        repeat_daily=True,
+        repeat_daily=(resolution_domain != "work"),
     )
     plan_dict["week_1_tasks"] = enriched_week1
     milestones = _normalize_milestones(plan_dict, target_weeks)
@@ -876,6 +897,7 @@ def _prepare_week_one_tasks(
     tasks: List[Dict[str, Any]],
     resolution_type: Optional[str],
     resolution_title: Optional[str],
+    resolution_domain: str,
 ) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     has_consistency = False
@@ -890,7 +912,7 @@ def _prepare_week_one_tasks(
         if _cadence_supports_consistency(cleaned.get("cadence")):
             has_consistency = True
         normalized.append(cleaned)
-    if not has_consistency:
+    if not has_consistency and resolution_domain != "work":
         normalized.append(_build_consistency_task(resolution_type, resolution_title))
     return normalized
 
@@ -1040,10 +1062,19 @@ def _finalize_plan(
 ) -> Dict[str, Any]:
     plan_dict["band"] = band_label
     plan_dict["band_rationale"] = band_rationale
-    summary = evaluation.to_dict()
-    summary["repair_used"] = repair_used
-    summary["regenerate_used"] = regenerate_used
-    summary["fallback_used"] = fallback_used
+    summary = {
+        "score": evaluation.score,
+        "band": evaluation.band,
+        "passed": evaluation.passed,
+        "weekly_minutes_week1": evaluation.weekly_minutes[0] if evaluation.weekly_minutes else 0,
+        "budget_violations_count": len(evaluation.budget_violations),
+        "overload_warnings_count": len(evaluation.overload_warnings),
+        "vagueness_flags": evaluation.vagueness_flags[:3],
+        "cadence_issues": evaluation.cadence_issues[:3],
+        "repair_used": repair_used,
+        "regenerate_used": regenerate_used,
+        "fallback_used": fallback_used,
+    }
     plan_dict["evaluation_summary"] = summary
     plan_dict["week_1_tasks"] = [_public_task_data(task) for task in plan_dict.get("week_1_tasks", [])]
     for section in plan_dict.get("weeks", []):

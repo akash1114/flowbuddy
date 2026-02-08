@@ -48,12 +48,18 @@ def client():
     app.dependency_overrides.clear()
 
 
-def _create_resolution_via_api(test_client: TestClient, *, duration: int | None = 8) -> UUID:
+def _create_resolution_via_api(
+    test_client: TestClient,
+    *,
+    duration: int | None = 8,
+    domain: str = "personal",
+) -> UUID:
     user_id = uuid4()
     payload = {
         "user_id": str(user_id),
         "text": "Build a mindful morning routine to support focus.",
         "duration_weeks": duration,
+        "domain": domain,
     }
     response = test_client.post("/resolutions", json=payload)
     assert response.status_code == 201
@@ -130,3 +136,13 @@ def test_decomposition_handles_disabled_observability(monkeypatch, client):
 
     response = test_client.post(f"/resolutions/{resolution_id}/decompose", json={"weeks": 4})
     assert response.status_code == 200
+
+
+def test_decomposition_work_domain_limits_week_one_tasks(client):
+    test_client, _ = client
+    resolution_id = _create_resolution_via_api(test_client, domain="work", duration=6)
+
+    response = test_client.post(f"/resolutions/{resolution_id}/decompose")
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["week_1_tasks"]) <= 4

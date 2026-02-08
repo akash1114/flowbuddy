@@ -211,7 +211,7 @@ export default function HomeScreen() {
     () => [
       {
         key: "weekly-plan",
-        label: "Weekly plan",
+        label: "Next week blueprint",
         icon: <Calendar color="#1A73E8" size={16} />,
         onPress: () => navigation.navigate("WeeklyPlan"),
       },

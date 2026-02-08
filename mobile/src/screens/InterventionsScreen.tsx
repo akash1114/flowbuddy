@@ -200,7 +200,7 @@ export default function InterventionsScreen() {
 
           {snapshot ? (
             <>
-              <StatusCard snapshot={snapshot} />
+          <StatusCard snapshot={snapshot} theme={theme} styles={styles} />
               {lastAction ? (
                 <View style={styles.actionResult}>
                   <Text style={styles.actionResultTitle}>Action applied</Text>
@@ -284,7 +284,17 @@ export default function InterventionsScreen() {
   );
 }
 
-function StatusCard({ snapshot }: { snapshot: InterventionSnapshot }) {
+type Styles = ReturnType<typeof createStyles>;
+
+function StatusCard({
+  snapshot,
+  theme,
+  styles,
+}: {
+  snapshot: InterventionSnapshot;
+  theme: ThemeTokens;
+  styles: Styles;
+}) {
   const flagged = snapshot.slippage.flagged;
   const completion = Math.round(snapshot.slippage.completion_rate * 100);
   const cardTheme = flagged

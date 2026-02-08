@@ -137,7 +137,7 @@ export default function WeeklyPlanScreen() {
       }
     >
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Weekly Plan</Text>
+        <Text style={styles.title}>Next Week Blueprint</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.linkButton} onPress={() => navigation.navigate("WeeklyPlanHistory")}>
             <Text style={styles.linkText}>History</Text>

@@ -17,6 +17,7 @@ from app.db.models.user import User
 from app.db.models.resolution import Resolution
 from app.db.models.task import Task
 from app.services.availability_profile import availability_prompt_block, sanitize_availability_profile
+from app.observability.tracing import trace
 
 
 @dataclass
@@ -75,7 +76,11 @@ def load_latest_weekly_plan(db: Session, user_id: UUID) -> AgentActionLog | None
     )
 
 
-def generate_weekly_plan(db: Session, user_id: UUID) -> Tuple[MicroResolutionPayload, WeeklyPlanInputs]:
+def generate_weekly_plan(
+    db: Session,
+    user_id: UUID,
+    request_id: str | None = None,
+) -> Tuple[MicroResolutionPayload, WeeklyPlanInputs]:
     """
     Call the Rolling Wave planner to produce a micro-resolution and suggested tasks.
 
@@ -93,12 +98,49 @@ def generate_weekly_plan(db: Session, user_id: UUID) -> Tuple[MicroResolutionPay
         ResolutionWeeklyStat(**entry)
         for entry in stats["resolution_stats"]
     ]
-    micro_resolution = _request_plan_from_llm(
-        context_summary,
-        resolution_models,
-        focus_resolution,
-        availability_profile,
-    )
+    trace_metadata = {
+        "completion_rate": stats["completion_rate"],
+        "active_resolutions": stats["active_resolutions"],
+        "primary_focus_resolution_id": str(focus_resolution["resolution_id"]) if focus_resolution else None,
+        "llm_input_text": context_summary[:500],
+    }
+    stats_preview = [
+        {
+            "title": model.title,
+            "domain": model.domain,
+            "completion_rate": model.completion_rate,
+        }
+        for model in resolution_models[:3]
+    ]
+    if stats_preview:
+        trace_metadata["resolution_stats_preview"] = stats_preview
+
+    with trace(
+        "weekly_plan.generate",
+        metadata={k: v for k, v in trace_metadata.items() if v not in (None, [], "")},
+        user_id=str(user_id),
+        request_id=request_id,
+    ) as planning_trace:
+        micro_resolution = _request_plan_from_llm(
+            context_summary,
+            resolution_models,
+            focus_resolution,
+            availability_profile,
+        )
+        if planning_trace and micro_resolution:
+            week_titles = [
+                task.title for task in (micro_resolution.suggested_week_1_tasks or []) if task.title
+            ]
+            preview_titles = week_titles[:4]
+            summary_text = micro_resolution.title or "Weekly focus"
+            if preview_titles:
+                summary_text = f"{summary_text} | Week 1: {', '.join(preview_titles)}"
+            planning_trace.update(
+                metadata={
+                    "llm_output_text": summary_text[:500],
+                    "week_1_titles": preview_titles,
+                }
+            )
 
     inputs = WeeklyPlanInputs(
         active_resolutions=stats["active_resolutions"],
@@ -143,7 +185,7 @@ def run_weekly_planning_for_user(
             setattr(existing, "_rolling_wave_created", False)
             return existing
 
-    micro_resolution, inputs = generate_weekly_plan(db, user_id)
+    micro_resolution, inputs = generate_weekly_plan(db, user_id, request_id=request_id)
     created_tasks = _materialize_tasks_from_plan(db, user_id, micro_resolution, week_start)
 
     payload = {

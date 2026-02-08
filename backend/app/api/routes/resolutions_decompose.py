@@ -69,10 +69,9 @@ def decompose_resolution_endpoint(
         "route": f"/resolutions/{resolution_id}/decompose",
         "resolution_id": str(resolution_id),
         "user_id": str(resolution.user_id),
-        "duration_weeks": resolution.duration_weeks,
-        "plan_weeks": plan_weeks,
-        "regenerate": regenerate,
         "request_id": request_id,
+        "domain": resolution_domain,
+        "llm_input_text": user_text[:500],
     }
 
     start_time = perf_counter()
@@ -88,7 +87,7 @@ def decompose_resolution_endpoint(
             metadata=base_metadata,
             user_id=str(resolution.user_id),
             request_id=request_id,
-        ):
+        ) as decomposition_trace:
             existing_plan = metadata.get("plan_v1")
             existing_tasks = fetch_draft_tasks(db, resolution.id)
 
@@ -142,6 +141,29 @@ def decompose_resolution_endpoint(
                 db.add(resolution)
                 db.commit()
                 task_models = fetch_draft_tasks(db, resolution.id)
+            if decomposition_trace and plan_dict:
+                evaluation_summary = plan_dict.get("evaluation_summary") or {}
+                summary_text = plan_dict.get("resolution_title") or ""
+                seen_titles = []
+                for task in plan_dict.get("week_1_tasks", []) or []:
+                    title = task.get("title")
+                    if title and title not in seen_titles:
+                        seen_titles.append(title)
+                trimmed_titles = seen_titles[:4]
+                if trimmed_titles:
+                    summary_text = f"{summary_text} | Week 1: {', '.join(trimmed_titles)}"
+                decomposition_trace.update(
+                    metadata={
+                        "llm_input_text": user_text[:500],
+                        "llm_output": {
+                            "plan_title": plan_dict.get("resolution_title"),
+                            "why_this": plan_dict.get("why_this_matters"),
+                            "week_1_titles": trimmed_titles,
+                        },
+                        "llm_output_text": summary_text.strip()[:500],
+                        "evaluation": evaluation_summary,
+                    }
+                )
             success = True
     except HTTPException:
         db.rollback()

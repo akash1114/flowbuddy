@@ -14,6 +14,7 @@ from app.db.models.agent_action_log import AgentActionLog
 from app.db.models.resolution import Resolution
 from app.db.models.task import Task
 from app.db.models.user import User
+from app.db.models.user_preferences import UserPreferences
 from app.main import app
 
 
@@ -36,6 +37,7 @@ def client():
     User.__table__.create(bind=engine)
     Resolution.__table__.create(bind=engine)
     Task.__table__.create(bind=engine)
+    UserPreferences.__table__.create(bind=engine)
     AgentActionLog.__table__.create(bind=engine)
 
     def override_get_db():

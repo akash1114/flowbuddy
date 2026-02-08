@@ -61,13 +61,13 @@ function Navigator() {
         />
         <Stack.Screen name="MyWeek" component={MyWeekScreen} options={{ title: "My Week" }} />
         <Stack.Screen name="Dashboard" component={ResolutionDashboardScreen} options={{ title: "Dashboard" }} />
-        <Stack.Screen name="WeeklyPlan" component={WeeklyPlanScreen} options={{ title: "Weekly Plan" }} />
+        <Stack.Screen name="WeeklyPlan" component={WeeklyPlanScreen} options={{ title: "Next Week Blueprint" }} />
         <Stack.Screen name="Interventions" component={InterventionsScreen} options={{ title: "Interventions" }} />
-        <Stack.Screen name="WeeklyPlanHistory" component={WeeklyPlanHistoryScreen} options={{ title: "History" }} />
+        <Stack.Screen name="WeeklyPlanHistory" component={WeeklyPlanHistoryScreen} options={{ title: "Blueprint History" }} />
         <Stack.Screen
           name="WeeklyPlanHistoryDetail"
           component={WeeklyPlanHistoryDetailScreen}
-          options={{ title: "Weekly Plan Snapshot" }}
+          options={{ title: "Blueprint Snapshot" }}
         />
         <Stack.Screen
           name="InterventionsHistory"

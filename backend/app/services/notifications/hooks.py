@@ -120,8 +120,14 @@ def _notify(
         "snapshot_id": str(log.id),
         "provider": settings.notifications_provider,
     }
+    metadata.update({k: v for k, v in extra.items() if v not in (None, "", [], {})})
     start = perf_counter()
-    with trace(trace_name, metadata=metadata, user_id=str(log.user_id), request_id=request_id):
+    with trace(
+        trace_name,
+        metadata=metadata,
+        user_id=str(log.user_id),
+        request_id=request_id,
+    ) as notification_trace:
         result = (
             service.notify_weekly_plan_ready(
                 user_id=log.user_id,
@@ -140,6 +146,8 @@ def _notify(
                 request_id=request_id,
             )
         )
+    if notification_trace and result.message:
+        notification_trace.update({"llm_output_text": result.message[:500]})
     duration_ms = (perf_counter() - start) * 1000
     log_metric("notifications.sent", 1, metadata={"job": job_name, "provider": settings.notifications_provider})
     log_metric("notifications.duration_ms", duration_ms, metadata={"job": job_name})

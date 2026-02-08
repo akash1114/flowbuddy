@@ -18,6 +18,7 @@ from app.db.models.task import Task
 from app.db.models.resolution import Resolution
 from app.core.config import settings
 from zoneinfo import ZoneInfo
+from app.observability.tracing import trace
 
 
 @dataclass
@@ -198,14 +199,33 @@ def _determine_slippage(stats: Dict[str, float | int]) -> Tuple[bool, str]:
 
 def _determine_intervention_card(stats: Dict[str, float | int]) -> InterventionCard:
     """Use Sarathi AI to craft a personalized intervention or fall back to heuristics."""
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        return _build_card(stats)
-
-    client = openai.OpenAI(api_key=api_key)
     completion_pct = int((stats.get("completion_rate") or 0) * 100)
     missed = int(stats.get("missed_scheduled") or 0)
     total = int(stats.get("total") or 0)
+    llm_input = (
+        f"User missed {missed} scheduled tasks out of {total}. "
+        f"Completion rate last 7 days: {completion_pct}%. "
+        "Provide a supportive intervention card with three options."
+    )
+    trace_metadata = {
+        "llm_input_text": llm_input[:500],
+        "completion_rate": stats.get("completion_rate"),
+        "missed_scheduled": missed,
+        "total_tasks": total,
+    }
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    with trace(
+        "intervention.generate",
+        metadata={k: v for k, v in trace_metadata.items() if v not in (None, "", [])},
+    ) as intervention_trace:
+        if not api_key:
+            card = _build_card(stats)
+            if intervention_trace:
+                intervention_trace.update(_summarize_card_for_trace(card))
+            return card
+
+        client = openai.OpenAI(api_key=api_key)
     system_prompt = (
         "You are Sarathi AI. The user is struggling. Analyze the data and generate a supportive intervention card "
         "with 3 distinct options. Offer one for getting back on track, one for adjusting the goal, and one for pausing."
@@ -230,14 +250,18 @@ def _determine_intervention_card(stats: Dict[str, float | int]) -> InterventionC
         content = response.choices[0].message.content or "{}"
         payload = json.loads(content)
         llm_card = InterventionCard.model_validate(payload)
-        return InterventionCard(
+        card = InterventionCard(
             title=llm_card.title or "Let's Adjust This Week",
             message=llm_card.message
             or _default_message(stats.get("completion_rate"), stats.get("missed_scheduled")),
-            options=_standard_options(),
+            options=llm_card.options or _standard_options(),
         )
     except Exception:
-        return _build_card(stats)
+        card = _build_card(stats)
+
+    if intervention_trace:
+        intervention_trace.update(_summarize_card_for_trace(card))
+    return card
 
 
 def _build_card(stats: Dict[str, float | int]) -> InterventionCard:
@@ -307,6 +331,17 @@ def _task_is_past_due(task: Task, reference: datetime) -> bool:
 
     # Tasks with times later today are not overdue yet
     return due_dt <= reference
+
+
+def _summarize_card_for_trace(card: InterventionCard) -> Dict[str, Any]:
+    summary = card.title or "Intervention"
+    if card.message:
+        summary = f"{summary}: {card.message}"
+    option_labels = [option.label for option in card.options or []]
+    return {
+        "llm_output_text": summary[:500],
+        "option_labels": option_labels,
+    }
 
 
 def _apply_preview_to_existing_log(log: AgentActionLog, preview: InterventionPreview, request_id: str | None) -> bool:

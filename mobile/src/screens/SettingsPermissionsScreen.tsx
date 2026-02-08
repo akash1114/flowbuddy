@@ -154,8 +154,8 @@ export default function SettingsPermissionsScreen() {
           <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Agent Permissions</Text>
             <SettingRow
-              label="Weekly plans"
-              description="Allow Sarthi AI to generate weekly plans."
+              label="Next week blueprint"
+              description="Allow Sarthi AI to generate the upcoming week's blueprint."
               value={prefs.weekly_plans_enabled}
               onValueChange={(value) => handleToggle("weekly_plans_enabled", value)}
               disabled={savingKey !== null || prefs.coaching_paused}
