@@ -1,0 +1,112 @@
+{
+  "decomposition_cases": [
+    {
+      "user_text": "Run a mindful 5k by July",
+      "duration_weeks": 8,
+      "domain": "personal",
+      "availability_profile": {
+        "work_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "work_start": "09:00",
+        "work_end": "18:00",
+        "peak_energy": "morning",
+        "work_mode_enabled": false,
+        "personal_slots": {
+          "fitness": "morning",
+          "learning": "evening",
+          "admin": "weekend"
+        }
+      }
+    },
+    {
+      "user_text": "Ship MVP for Sarthi side-project",
+      "duration_weeks": 6,
+      "domain": "work",
+      "availability_profile": {
+        "work_days": ["Mon", "Tue", "Wed", "Thu"],
+        "work_start": "10:00",
+        "work_end": "19:00",
+        "peak_energy": "evening",
+        "work_mode_enabled": true,
+        "personal_slots": {
+          "fitness": "morning",
+          "learning": "evening",
+          "admin": "weekend"
+        }
+      }
+    },
+    {
+      "user_text": "Learn piano basics in 3 months",
+      "duration_weeks": 12,
+      "domain": "personal",
+      "availability_profile": {
+        "work_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "work_start": "08:00",
+        "work_end": "17:00",
+        "peak_energy": "evening",
+        "work_mode_enabled": false,
+        "personal_slots": {
+          "fitness": "morning",
+          "learning": "evening",
+          "admin": "weekend"
+        }
+      }
+    }
+  ],
+  "weekly_plan_cases": [
+    {
+      "user_id_hint": "synthetic-user-1",
+      "active_resolutions": [
+        {
+          "title": "Run mindful 5k",
+          "domain": "personal",
+          "completion_rate": 0.42
+        },
+        {
+          "title": "Read 12 books",
+          "domain": "personal",
+          "completion_rate": 0.78
+        }
+      ],
+      "stats": {
+        "total_tasks": 8,
+        "completed_tasks": 3,
+        "notes": [
+          "Felt low energy Wednesday",
+          "Weekend jog went well"
+        ]
+      }
+    },
+    {
+      "user_id_hint": "synthetic-user-2",
+      "active_resolutions": [
+        {
+          "title": "Ship MVP",
+          "domain": "work",
+          "completion_rate": 0.61
+        }
+      ],
+      "stats": {
+        "total_tasks": 5,
+        "completed_tasks": 4,
+        "notes": [
+          "Blocked on API integration",
+          "Stakeholder happy with progress"
+        ]
+      }
+    }
+  ],
+  "intervention_cases": [
+    {
+      "user_id_hint": "synthetic-user-3",
+      "completion_rate": 0.32,
+      "missed_scheduled": 3,
+      "total": 7
+    },
+    {
+      "user_id_hint": "synthetic-user-4",
+      "completion_rate": 0.55,
+      "missed_scheduled": 1,
+      "total": 5
+    }
+  ]
+}

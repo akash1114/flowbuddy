@@ -115,10 +115,23 @@ def _notify(
 
     service = get_notification_service()
     trace_name = f"notifications.{job_name}"
+    payload = log.action_payload or {}
+    if job_name == "weekly_plan":
+        plan = payload.get("micro_resolution") or {}
+        week_tasks = plan.get("suggested_week_1_tasks") or plan.get("week_1_tasks") or []
+        titles = [task.get("title") for task in week_tasks if isinstance(task, dict) and task.get("title")]
+        plan_summary = plan.get("title") or plan.get("resolution_title") or "Next week blueprint"
+        if titles:
+            plan_summary = f"{plan_summary} | Week 1: {', '.join(titles[:4])}"
+        input_summary = plan_summary
+    else:
+        card = payload.get("card") or {}
+        input_summary = card.get("title") or card.get("message") or "Intervention notification"
     metadata = {
         "user_id": str(log.user_id),
         "snapshot_id": str(log.id),
         "provider": settings.notifications_provider,
+        "llm_input_text": (input_summary or "")[:500],
     }
     metadata.update({k: v for k, v in extra.items() if v not in (None, "", [], {})})
     start = perf_counter()
@@ -146,8 +159,10 @@ def _notify(
                 request_id=request_id,
             )
         )
-    if notification_trace and result.message:
-        notification_trace.update({"llm_output_text": result.message[:500]})
+    if notification_trace:
+        message = getattr(result, "message", None) or result.reason or result.status
+        summary_text = f"{job_name.title()} notification: {message}"
+        notification_trace.update({"llm_output_text": summary_text[:500]})
     duration_ms = (perf_counter() - start) * 1000
     log_metric("notifications.sent", 1, metadata={"job": job_name, "provider": settings.notifications_provider})
     log_metric("notifications.duration_ms", duration_ms, metadata={"job": job_name})

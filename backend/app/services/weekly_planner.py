@@ -137,6 +137,7 @@ def generate_weekly_plan(
                 summary_text = f"{summary_text} | Week 1: {', '.join(preview_titles)}"
             planning_trace.update(
                 metadata={
+                    "llm_input_text": context_summary[:500],
                     "llm_output_text": summary_text[:500],
                     "week_1_titles": preview_titles,
                 }
