@@ -102,34 +102,39 @@ The app expects the backend to run at the base URL configured in `mobile/src/api
 ## Product Walkthrough (Screenshots)
 
 ### Home + Daily Flow
-![Home screen showing daily flow, quick actions, and context toggles](mobile/assets/images/Home%20Screen.png)
-Here’s the landing screen of Sarthi, your supportive productivity coach. Because Sarthi understands your preferred contexts, it automatically highlights the current focus (Work or Personal) and lines up the most relevant hero task, quick actions, and praise nudges pulled from `/dashboard`, `/tasks`, and `/journey`. You can immediately jump into a Brain Dump, draft plans, interventions, or personalization without hunting for menus.
+<img src="mobile/assets/images/Home%20Screen.png" alt="Home screen showing daily flow, quick actions, and context toggles" width="360">
+
+Here’s the landing screen of **Sarthi**, your supportive productivity coach. Because Sarthi understands your preferred contexts, it automatically highlights the current focus (Work or Personal) and lines up the most relevant hero task, quick actions, and praise nudges pulled from `/dashboard`, `/tasks`, and `/journey`. You can immediately jump into a Brain Dump, draft plans, interventions, or personalization without hunting for menus.
 
 ### Brain Dump Signal Extraction
-![Brain dump input and analysis showing emotions and actionable signals](mobile/assets/images/Braindump.png)
-When a random thought or blocker shows up, the Brain Dump screen is your pressure-release valve. You pour in raw text, Sarthi’s `BrainDumpExtractor` detects emotions, blockers, and intent shifts, then reflects empathetic acknowledgement plus optional next steps (never surprise tasks). If you accept an option, the backend routes it through `/tasks` or `/interventions/respond`, otherwise Sarthi simply notes the signal for future planning.
+<img src="mobile/assets/images/Braindump.png" alt="Brain dump input and analysis showing emotions and actionable signals" width="360">
+
+When a random thought or blocker shows up, the Brain Dump screen is your pressure-release valve. You pour in raw text, Sarthi’s `BrainDumpExtractor` detects **emotions**, **blockers**, and **intent shifts**, then reflects empathetic acknowledgement plus optional next steps (never surprise tasks). If you accept an option, the backend routes it through `/tasks` or `/interventions/respond`, otherwise Sarthi simply notes the signal for future planning.
 
 ### Personalizing Your Flow
-![Calendar sync dialog confirming scheduled tasks are pushed to device calendar](mobile/assets/images/Calander%20sync.png)
-Don’t want Sarthi guessing blindly? The “Personalize Your Flow” settings let you declare work days, quiet hours, and when you prefer creative work vs hobbies. Those knobs feed into availability profiles so every Rolling Wave plan or Focus Mode session respects the cadence you set—and when you sync tasks to your calendar, they slot directly into the time blocks you approved.
+<img src="mobile/assets/images/Personalize.png" alt="Personalize flow screen showing work blocks and preferred time slots" width="360">
+
+This screen is basically a coffee chat with Sarthi about your ideal day. I tell it when I’m “on the clock,” which days feel like work mode, and where I prefer to slot fitness, hobbies, or chores. Those choices flow straight into availability profiles, so every Rolling Wave plan or Focus Mode timer feels like it was written for me—not for some generic productivity robot. Later, when I sync tasks to my calendar, they land inside the windows I just described.
 
 ### Rolling Wave Plan Review
-![Week one plan review with editable tasks](mobile/assets/images/Week%20one%20plan.png)
-![Week two follow-up view showing evolving focus](mobile/assets/images/Week%202%20with%20goal.png)
+<img src="mobile/assets/images/Week%20one%20plan.png" alt="Week one plan review with editable tasks" width="360">
+<img src="mobile/assets/images/Week%202%20with%20goal.png" alt="Week two follow-up view showing evolving focus" width="360">
+
 Plan Review turns vague resolutions like “Learn piano” into a 4–12 week path. You set the timeline, Sarthi decomposes it using your personalized context, and you can edit any Week 1 task before activating. Approving calls `/resolutions/{id}/approve`, materializing tasks, logging the action, and allowing you to sync dated items to your device calendar so reminders fire at the right moment.
 
 ### Weekly Focus Snapshot
-![Weekly plan focus card with stats and resolve selector](mobile/assets/images/Weekly%20Plan.png)
-![Weekly overview dashboard card aggregating completion metrics](mobile/assets/images/Weekly%20Overview.png)
+<img src="mobile/assets/images/Weekly%20Plan.png" alt="Weekly plan focus card with stats and resolve selector" width="360">
+<img src="mobile/assets/images/Weekly%20Overview.png" alt="Weekly overview dashboard card aggregating completion metrics" width="360">
+
 Every Sunday, Sarthi runs the second layer of personalization. The Weekly Plan screen fetches `/weekly-plan/latest` to show the micro-resolution focus, “why this matters,” and per-resolution stats so you know exactly where momentum is building or lagging. The dashboard “Weekly Overview” mirrors those numbers at a glance and bubbles up resolutions that need a nudge.
 
 ### Intervention Coach
-![Intervention card offering recovery options](mobile/assets/images/Intervantion.png)
+<img src="mobile/assets/images/Intervantion.png" alt="Intervention card offering recovery options" width="360">
 Every Thursday, Sarthi runs an intervention check. If your week looks overloaded, `/interventions/latest` returns a card explaining the risk and three choices that keep agency with you: **Reschedule** automatically moves remaining tasks into your next free slots, **Reduce Load** trims scope for the week while logging a note, and **Short Break** parks the plan temporarily so you can recover guilt-free. Each button routes through `respondToIntervention` and records the outcome in `agent_actions_log`.
 
 ### Focus Mode + Calendar Sync
-![Focus mode timer with quiet notifications and capture tools](mobile/assets/images/Focus%20Mode.png)
-When it’s go-time, Focus Mode silences notifications, puts one task front-and-center, and lets you log distracting thoughts via a mini Brain Dump so Opik’s evaluation engine can learn what derailed you. Completing the session marks the task done through `/tasks` and automatically loads the next item in your queue. Combined with the calendar sync flow above, Focus Mode keeps you anchored to the schedule you designed while still adapting if life happens.
+<img src="mobile/assets/images/Focus%20Mode.png" alt="Focus mode timer with quiet notifications and capture tools" width="360">
+When it’s go-time, Focus Mode silences notifications, puts one task front-and-center, and lets you log distracting thoughts via a mini Brain Dump so Opik’s evaluation engine can learn what derailed you. Completing the session marks the task done through `/tasks` and automatically loads the next item in your queue. Paired with the calendar sync step in Plan Review, Focus Mode keeps you anchored to the schedule you designed while still adapting if life happens.
 
 ---
 
