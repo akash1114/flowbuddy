@@ -115,13 +115,13 @@ This screen is basically a coffee chat with Sarthi about your ideal day. I tell 
 <img src="mobile/assets/images/Week%20one%20plan.png" alt="Week one plan review with editable tasks" width="360">
 <img src="mobile/assets/images/Week%202%20with%20goal.png" alt="Week two follow-up view showing evolving focus" width="360">
 
-Plan Review turns vague resolutions like “Learn piano” into a 4–12 week path. You set the timeline, Sarthi decomposes it using your personalized context, and you can edit any Week 1 task before activating. Approving calls `/resolutions/{id}/approve`, materializing tasks, logging the action, and allowing you to sync dated items to your device calendar so reminders fire at the right moment.
+Plan Review turns vague resolutions like “Learn piano” into a 4–12 week path, but only week one becomes concrete so you’re not overwhelmed by a wall of future tasks. You set the timeline, Sarthi decomposes it using your personalized context, and you can edit any Week 1 task before activating. Approving calls `/resolutions/{id}/approve`, materializing just those near-term tasks, logging the action, and allowing you to sync dated items to your device calendar so reminders fire at the right moment.
 
 ### Weekly Focus Snapshot
 <img src="mobile/assets/images/Weekly%20Plan.png" alt="Weekly plan focus card with stats and resolve selector" width="360">
 <img src="mobile/assets/images/Weekly%20Overview.png" alt="Weekly overview dashboard card aggregating completion metrics" width="360">
 
-Every Sunday, Sarthi runs the second layer of personalization. The Weekly Plan screen fetches `/weekly-plan/latest` to show the micro-resolution focus, “why this matters,” and per-resolution stats so you know exactly where momentum is building or lagging. The dashboard “Weekly Overview” mirrors those numbers at a glance and bubbles up resolutions that need a nudge.
+Rolling Wave is intentional: only Week 1 becomes actionable so you’re never staring at 12 weeks of impossible homework. Each Sunday Sarthi looks at what you actually completed, how many tasks spilled, and the preferences you set earlier, then stitches together the next micro-resolution plus the handful of tasks worth activating. If last week’s completion rate dipped, it lightens or reschedules; if you crushed it, it nudges you forward. `/weekly-plan/latest` surfaces that new focus, the “why this matters,” and completion stats per resolution. The dashboard “Weekly Overview” mirrors those numbers at a glance and bubbles up resolutions that need a nudge.
 
 ### Intervention Coach
 <img src="mobile/assets/images/Intervantion.png" alt="Intervention card offering recovery options" width="360">
